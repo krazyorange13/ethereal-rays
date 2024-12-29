@@ -1,7 +1,7 @@
 WFLAGS = -Wall -Wextra -Wno-unused-command-line-argument -Wno-enum-conversion
 IFLAGS = -Isrc/ -Iinclude/
-LFLAGS = -Llib/ -lSDL3
-MFLAGS = -Ofast
+LFLAGS = -Llib/ -lSDL3 -lSDL3_image
+MFLAGS = -O2
 FLAGS = $(IFLAGS) $(LFLAGS) $(WFLAGS) $(MFLAGS)
 
 CC = gcc-14
@@ -27,4 +27,4 @@ $(BUILD_DIR)/%.o : %.c
 
 .PHONY: clean
 clean:
-	-rm $(BUILD_DIR)/$(TARGET) $(O_FILES) $(D_FILES)
+	rm -f $(BUILD_DIR)/$(TARGET) $(O_FILES) $(D_FILES)

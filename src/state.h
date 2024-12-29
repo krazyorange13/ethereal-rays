@@ -9,6 +9,7 @@ typedef struct _ETHER_state ETHER_state;
 typedef struct _ETHER_state_input ETHER_state_input;
 typedef struct _ETHER_state_keybinds ETHER_state_keybinds;
 typedef struct _ETHER_state_entities ETHER_state_entities;
+typedef struct _ETHER_state_textures ETHER_state_textures;
 
 typedef struct _ETHER_entity ETHER_entity;
 
@@ -16,8 +17,12 @@ ETHER_state_keybinds create_default_state_keybinds();
 
 struct _ETHER_state
 {
+    double fps;
+    BOOL quit;
     ETHER_state_input *input;
     ETHER_state_keybinds *keybinds;
+    ETHER_state_textures *textures;
+    ETHER_state_entities *entities;
 };
 
 struct _ETHER_state_input
@@ -43,17 +48,20 @@ struct _ETHER_state_entities
     ETHER_entity *tail;
 };
 
-/* entities */
-
-void ETHER_state_entities_add(ETHER_state_entities *entities, ETHER_entity *entity);
-ETHER_entity *ETHER_state_entities_pop(ETHER_state_entities *entities);
-
 struct _ETHER_entity
 {
     ETHER_vec2 pos;
-    ETHER_col col;
+    SDL_Texture *texture;
     struct _ETHER_entity *next;
     struct _ETHER_entity *prev;
 };
+
+struct _ETHER_state_textures
+{
+    SDL_Texture *player;
+    SDL_Texture *gem;
+};
+
+void ETHER_state_textures_load(SDL_Renderer *renderer, ETHER_state_textures *textures);
 
 #endif

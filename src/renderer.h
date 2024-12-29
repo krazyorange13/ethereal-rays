@@ -1,5 +1,5 @@
-#ifndef _ETHER_RENDER_H
-#define _ETHER_RENDER_H
+#ifndef _ETHER_RENDERER_H
+#define _ETHER_RENDERER_H
 
 #include "utils.h"
 #include "state.h"

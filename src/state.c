@@ -1,6 +1,8 @@
 #include "state.h"
 #include "settings.h"
 
+#include "SDL3_image/SDL_image.h"
+
 ETHER_state_keybinds create_default_state_keybinds()
 {
     ETHER_state_keybinds state;
@@ -11,45 +13,11 @@ ETHER_state_keybinds create_default_state_keybinds()
     return state;
 }
 
-ETHER_state_entities ETHER_create_state_entities()
+void ETHER_state_textures_load(SDL_Renderer *renderer, ETHER_state_textures *textures)
 {
-    ETHER_state_entities entities;
-    entities.count = 0;
-    entities.head = NULL;
-    entities.tail = NULL;
-    return entities;
-}
+    textures->player = IMG_LoadTexture(renderer, "res/player.png");
+    SDL_SetTextureScaleMode(textures->player, SDL_SCALEMODE_NEAREST);
 
-void ETHER_state_entities_add(ETHER_state_entities *entities, ETHER_entity *entity)
-{
-    if (entities->count)
-    {
-        entities->tail->next = entity;
-        entity->prev = entities->tail;
-        entities->tail = entity;
-        entity->next = NULL;
-    }
-    else
-    {
-        entities->head = entity;
-        entities->tail = entity;
-        entity->next = NULL;
-        entity->prev = NULL;
-    }
-    entities->count++;
-}
-
-ETHER_entity *ETHER_state_entities_pop(ETHER_state_entities *entities)
-{
-    if (entities->count)
-    {
-        ETHER_entity *p = entities->tail;
-        p->prev->next = NULL;
-        p->prev = NULL;
-        return p;
-    }
-    else
-    {
-        return NULL;
-    }
+    textures->gem = IMG_LoadTexture(renderer, "res/gem.png");
+    SDL_SetTextureScaleMode(textures->gem, SDL_SCALEMODE_NEAREST);
 }
