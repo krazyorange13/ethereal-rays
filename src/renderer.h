@@ -3,6 +3,7 @@
 
 #include "utils.h"
 #include "state.h"
+#include "controller.h"
 
 #include "SDL3/SDL.h"
 

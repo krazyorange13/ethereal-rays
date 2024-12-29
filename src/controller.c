@@ -57,15 +57,6 @@ void handle_event(SDL_Event *event, ETHER_state *state)
     {
         if (event->key.scancode == SDL_SCANCODE_Q)
             state->quit = TRUE;
-        
-        if (event->key.scancode == SDL_SCANCODE_SPACE)
-        {
-            ETHER_entity *temp_entity = malloc(sizeof(ETHER_entity));
-            temp_entity->texture = state->textures->gem;
-            temp_entity->pos.x = rand() % RENDER_WIDTH;
-            temp_entity->pos.y = rand() % RENDER_HEIGHT;
-            ETHER_entities_add(state->entities, temp_entity);
-        }
 
         SDL_Scancode code = event->key.scancode;
         HANDLE_BOUND_INPUT(move_up)
@@ -129,6 +120,10 @@ void ETHER_insertion_sort(ETHER_state_entities *entities)
         }
     }
 }
+
+/*
+ * Entity list operations
+ */
 
 void ETHER_move_entity(ETHER_entity *curr, ETHER_entity *dest_prev)
 {
@@ -215,4 +210,92 @@ ETHER_entity *ETHER_entities_pop(ETHER_state_entities *entities)
     {
         return NULL;
     }
+}
+
+/*
+ * Quadtree structure operations
+ */
+
+void _ETHER_node_debug(ETHER_node *node, uint8_t depth);
+
+void ETHER_node_debug(ETHER_node *node)
+{
+    _ETHER_node_debug(node, 0);
+}
+
+void _ETHER_node_debug(ETHER_node *node, uint8_t depth)
+{
+    if (node == NULL)
+        return;
+
+    printf("%*snode\n", depth * 2, "");
+    
+    for (uint8_t i = 0; i < 4; i++)
+    {
+        _ETHER_node_debug(node->quad[i], depth + 1);
+    }
+}
+
+void ETHER_node_create(ETHER_node **node, ETHER_node *parent)
+{
+    *node = malloc(sizeof(ETHER_node));
+    (*node)->quad = malloc(sizeof(ETHER_node *) * 4);
+    memset((*node)->quad, 0, sizeof(ETHER_node *) * 4);
+    (*node)->leaf = NULL;
+    (*node)->parent = parent;
+    (*node)->rect = ETHER_node_get_rect(*node);
+}
+
+void ETHER_node_subdivide(ETHER_node *node)
+{
+    if (node->quad[0] != NULL || node->quad[1] != NULL
+     || node->quad[2] != NULL || node->quad[3] != NULL)
+    {
+        printf("oopsies bad subdivide\n");
+        return;
+    }
+    ETHER_node **nodes = malloc(sizeof(ETHER_node *) * 4);
+    ETHER_node_create(&nodes[0], node);
+    ETHER_node_create(&nodes[1], node);
+    ETHER_node_create(&nodes[2], node);
+    ETHER_node_create(&nodes[3], node);
+    node->quad[0] = nodes[0];
+    node->quad[1] = nodes[1];
+    node->quad[2] = nodes[2];
+    node->quad[3] = nodes[3];
+}
+
+uint8_t ETHER_node_get_parent_pos(ETHER_node *node)
+{
+    for (uint8_t i = 0; i < 4; i++)
+    {
+        if (node->parent->quad[i] == node)
+            return i;
+    }
+    return 4;
+}
+
+ETHER_rect ETHER_node_get_rect(ETHER_node *node)
+{
+    if (node->parent == NULL)
+    {
+        ETHER_rect rect = {{0, 0}, {ETHER_STATE_QUADTREE_MAX_SIZE, ETHER_STATE_QUADTREE_MAX_SIZE}};
+        return rect;
+    }
+
+    ETHER_rect prect = node->parent->rect; //ETHER_node_get_rect(node->parent);
+    uint8_t pos = ETHER_node_get_parent_pos(node);
+
+    if (pos == 4)
+    {
+        printf("BAD BAD BAD BAD\n");
+    }
+
+    ETHER_rect rect;
+    rect.pos.x = prect.pos.x + ((prect.dim.x * (pos % 2)) >> 1);
+    rect.pos.y = prect.pos.y + ((prect.dim.y * (pos / 2)) >> 1);
+    rect.dim.x = prect.dim.x >> 1;
+    rect.dim.y = prect.dim.y >> 1;
+
+    return rect;
 }

@@ -8,7 +8,10 @@
 #include "renderer.h"
 #include "controller.h"
 
-void handle_event(SDL_Event *event, BOOL *quit, ETHER_state_input *input, ETHER_state_keybinds *keybinds);
+void ETHER_rect_debug(ETHER_rect rect)
+{
+    printf("%d %d %d %d\n", rect.pos.x, rect.pos.y, rect.dim.x, rect.dim.y);
+}
 
 int main()
 {
@@ -27,21 +30,29 @@ int main()
 
     ETHER_state_entities state_entities = {};
 
-    SDL_Texture *gem_tex = IMG_LoadTexture(sdl_renderer, "res/gem.png");
-    SDL_SetTextureScaleMode(gem_tex, SDL_SCALEMODE_NEAREST);
+    // #define ENTITY_COUNT 1000
 
-    #define ENTITY_COUNT 1000
+    // srand(time(NULL));
+    // ETHER_entity *temp_entities = malloc(sizeof(ETHER_entity) * ENTITY_COUNT);
+    // for (int i = 0; i < ENTITY_COUNT; i++)
+    // {
+    //     ETHER_entity *temp_entity = temp_entities + i;
+    //     temp_entity->texture = state_textures.player;
+    //     temp_entity->pos.x = rand() % RENDER_WIDTH;
+    //     temp_entity->pos.y = rand() % RENDER_HEIGHT;
+    //     ETHER_entities_add(&state_entities, temp_entity);
+    // }
 
-    srand(time(NULL));
-    ETHER_entity *temp_entities = malloc(sizeof(ETHER_entity) * ENTITY_COUNT);
-    for (int i = 0; i < ENTITY_COUNT; i++)
-    {
-        ETHER_entity *temp_entity = temp_entities + i;
-        temp_entity->texture = gem_tex;
-        temp_entity->pos.x = rand() % RENDER_WIDTH;
-        temp_entity->pos.y = rand() % RENDER_HEIGHT;
-        ETHER_entities_add(&state_entities, temp_entity);
-    }
+    ETHER_state_quadtree state_quadtree;
+    ETHER_node_create(&state_quadtree.base, NULL);
+    ETHER_node_subdivide(state_quadtree.base);
+    ETHER_node_subdivide(state_quadtree.base->quad[0]);
+    // ETHER_node_subdivide(state_quadtree.base->quad[1]);
+    // ETHER_node_subdivide(state_quadtree.base->quad[1]->quad[0]);
+    ETHER_node_debug(state_quadtree.base);
+    ETHER_rect_debug(ETHER_node_get_rect(state_quadtree.base));
+    ETHER_rect_debug(ETHER_node_get_rect(state_quadtree.base->quad[0]));
+    ETHER_rect_debug(ETHER_node_get_rect(state_quadtree.base->quad[0]->quad[0]));
 
     ETHER_state state;
     state.fps = 0;
@@ -50,6 +61,7 @@ int main()
     state.keybinds = &state_keybinds;
     state.textures = &state_textures;
     state.entities = &state_entities;
+    state.quadtree = &state_quadtree;
 
     uint64_t frequency = SDL_GetPerformanceFrequency();
     uint64_t frame_timer = 0;

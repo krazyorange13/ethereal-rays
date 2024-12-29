@@ -20,4 +20,7 @@ void ETHER_state_textures_load(SDL_Renderer *renderer, ETHER_state_textures *tex
 
     textures->gem = IMG_LoadTexture(renderer, "res/gem.png");
     SDL_SetTextureScaleMode(textures->gem, SDL_SCALEMODE_NEAREST);
+
+    textures->leaf = IMG_LoadTexture(renderer, "res/leaf.png");
+    SDL_SetTextureScaleMode(textures->leaf, SDL_SCALEMODE_NEAREST);
 }
