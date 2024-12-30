@@ -8,11 +8,6 @@
 #include "renderer.h"
 #include "controller.h"
 
-void ETHER_rect_debug(ETHER_rect rect)
-{
-    printf("%d %d %d %d\n", rect.pos.x, rect.pos.y, rect.dim.x, rect.dim.y);
-}
-
 int main()
 {
     SDL_Init(SDL_INIT_VIDEO);
@@ -37,22 +32,18 @@ int main()
     // for (int i = 0; i < ENTITY_COUNT; i++)
     // {
     //     ETHER_entity *temp_entity = temp_entities + i;
-    //     temp_entity->texture = state_textures.player;
+    //     temp_entity->texture = state_textures.gem;
     //     temp_entity->pos.x = rand() % RENDER_WIDTH;
     //     temp_entity->pos.y = rand() % RENDER_HEIGHT;
     //     ETHER_entities_add(&state_entities, temp_entity);
     // }
 
     ETHER_state_quadtree state_quadtree;
-    ETHER_node_create(&state_quadtree.base, NULL);
+    ETHER_node_create(&state_quadtree.base, NULL, 0);
     ETHER_node_subdivide(state_quadtree.base);
-    ETHER_node_subdivide(state_quadtree.base->quad[0]);
-    // ETHER_node_subdivide(state_quadtree.base->quad[1]);
-    // ETHER_node_subdivide(state_quadtree.base->quad[1]->quad[0]);
+    ETHER_node_subdivide(state_quadtree.base->quad[0].node);
+    ETHER_node_subdivide(state_quadtree.base->quad[0].node->quad[3].node);
     ETHER_node_debug(state_quadtree.base);
-    ETHER_rect_debug(ETHER_node_get_rect(state_quadtree.base));
-    ETHER_rect_debug(ETHER_node_get_rect(state_quadtree.base->quad[0]));
-    ETHER_rect_debug(ETHER_node_get_rect(state_quadtree.base->quad[0]->quad[0]));
 
     ETHER_state state;
     state.fps = 0;
