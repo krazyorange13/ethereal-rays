@@ -20,6 +20,7 @@ struct _ETHER_state
 {
     double fps;
     BOOL quit;
+    ETHER_vec2_float mouse;
     ETHER_state_input *input;
     ETHER_state_keybinds *keybinds;
     ETHER_state_textures *textures;
@@ -76,8 +77,9 @@ void ETHER_state_textures_load(SDL_Renderer *renderer, ETHER_state_textures *tex
 
 #define BLOCK_SIZE 16
 #define CHUNK_SIZE 16
-#define QUADTREE_SIZE 255
 #define CHUNK_WORLD_SIZE BLOCK_SIZE * CHUNK_SIZE
+#define QUADTREE_SIZE 255
+#define QUADTREE_DEPTH 8
 
 typedef uint8_t block_id_t;
 typedef uint8_t chunk_coord_t;
@@ -100,7 +102,7 @@ struct _ETHER_chunk
 
 union _ETHER_branch
 {
-    ETHER_node *node;
+    ETHER_node **quad;
     ETHER_leaf *leaf;
 };
 
@@ -110,19 +112,28 @@ struct _ETHER_node
     uint8_t ppos;
     uint8_t depth;
     ETHER_rect_u8 rect;
-    ETHER_branch *quad;
+    ETHER_branch branch;
+    BOOL is_leaf;
 };
 
 struct _ETHER_leaf
 {
+    ETHER_node *parent;
+    ETHER_rect_u8 rect_quadtree;
+    ETHER_rect_u16 rect_world;
     ETHER_chunk chunk;
 };
 
+void ETHER_leaf_create(ETHER_leaf **leaf, ETHER_node *parent);
 void ETHER_node_create(ETHER_node **node, ETHER_node *parent, uint8_t ppos);
 void ETHER_node_subdivide(ETHER_node *node);
+ETHER_leaf *ETHER_node_create_leaf(ETHER_node *node, ETHER_vec2_u8 pos);
+BOOL ETHER_node_isend(ETHER_node *node);
+uint8_t ETHER_node_get_quadrant(ETHER_node *node, ETHER_vec2_u8 pos);
 uint8_t ETHER_node_get_depth(ETHER_node *node);
 uint8_t ETHER_node_get_ppos(ETHER_node *node);
 ETHER_rect_u8 ETHER_node_get_rect(ETHER_node *node);
+ETHER_rect_u16 ETHER_rect_quadtree_to_world(ETHER_rect_u8 rect);
 void ETHER_node_debug(ETHER_node *node);
 
 #endif

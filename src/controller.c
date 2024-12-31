@@ -25,6 +25,8 @@ void ETHER_update(ETHER_state *state)
     {
         handle_event(&event, state);
     }
+    
+    SDL_GetMouseState(&state->mouse.x, &state->mouse.y);
 
     for (ETHER_entity *p = state->entities->head; p != NULL; p = p->next)
     {

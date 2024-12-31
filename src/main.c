@@ -25,24 +25,25 @@ int main()
 
     ETHER_state_entities state_entities = {};
 
-    // #define ENTITY_COUNT 1000
+    #define ENTITY_COUNT 1000
 
-    // srand(time(NULL));
-    // ETHER_entity *temp_entities = malloc(sizeof(ETHER_entity) * ENTITY_COUNT);
-    // for (int i = 0; i < ENTITY_COUNT; i++)
-    // {
-    //     ETHER_entity *temp_entity = temp_entities + i;
-    //     temp_entity->texture = state_textures.gem;
-    //     temp_entity->pos.x = rand() % RENDER_WIDTH;
-    //     temp_entity->pos.y = rand() % RENDER_HEIGHT;
-    //     ETHER_entities_add(&state_entities, temp_entity);
-    // }
+    srand(time(NULL));
+    ETHER_entity *temp_entities = malloc(sizeof(ETHER_entity) * ENTITY_COUNT);
+    for (int i = 0; i < ENTITY_COUNT; i++)
+    {
+        ETHER_entity *temp_entity = temp_entities + i;
+        temp_entity->texture = state_textures.gem;
+        temp_entity->pos.x = rand() % RENDER_WIDTH;
+        temp_entity->pos.y = rand() % RENDER_HEIGHT;
+        ETHER_entities_add(&state_entities, temp_entity);
+    }
 
     ETHER_state_quadtree state_quadtree;
     ETHER_node_create(&state_quadtree.base, NULL, 0);
-    ETHER_node_subdivide(state_quadtree.base);
-    ETHER_node_subdivide(state_quadtree.base->quad[0].node);
-    ETHER_node_subdivide(state_quadtree.base->quad[0].node->quad[3].node);
+
+    ETHER_leaf *temp_leaf = ETHER_node_create_leaf(state_quadtree.base, (ETHER_vec2_u8) {0, 0});
+    printf("%p\n", temp_leaf);
+
     ETHER_node_debug(state_quadtree.base);
 
     ETHER_state state;

@@ -35,3 +35,15 @@ void ETHER_rect_u16_debug_inline(ETHER_rect_u16 rect)
 {
     printf("{ %d %d %d %d }", rect.x, rect.y, rect.w, rect.h);
 }
+
+BOOL ETHER_vec2_in_rect_u8(ETHER_vec2_u8 pos, ETHER_rect_u8 rect)
+{
+    return pos.x >= rect.x && pos.x <= rect.x + rect.w
+        && pos.y >= rect.y && pos.y <= rect.y + rect.h;
+}
+
+BOOL ETHER_vec2_in_rect_u16(ETHER_vec2_u16 pos, ETHER_rect_u16 rect)
+{
+    return pos.x >= rect.x && pos.x <= rect.x + rect.w
+        && pos.y >= rect.y && pos.y <= rect.y + rect.h;
+}

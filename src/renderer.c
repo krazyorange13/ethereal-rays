@@ -42,23 +42,37 @@ void ETHER_render(SDL_Renderer *renderer, ETHER_state *state)
     snprintf(__##bind, __##bind##_len, "%-15s%s", #bind, __##bind##_val); \
     SDL_RenderDebugText(renderer, 10, row * 10, __##bind);
 
-void ETHER_render_node_debug(SDL_Renderer *renderer, ETHER_node *node)
+void ETHER_render_node_debug(SDL_Renderer *renderer, ETHER_node *node, uint16_t mul)
 {
     if (node == NULL)
         return;
 
     SDL_FRect sdl_frect = {
-        node->rect.x,
-        node->rect.y,
-        node->rect.w,
-        node->rect.h
+        node->rect.x * mul,
+        node->rect.y * mul,
+        node->rect.w * mul,
+        node->rect.h * mul
     };
-    SDL_SetRenderDrawColor(renderer, 0, 0, 255, 255);
-    SDL_RenderRect(renderer, &sdl_frect);
+
+    if (!node->is_leaf)
+    {
+        SDL_SetRenderDrawColor(renderer, 0, 0, 255, 255);
+        SDL_RenderRect(renderer, &sdl_frect);
+    }
+    else
+    {
+        sdl_frect.x += 1;
+        sdl_frect.y += 1;
+        sdl_frect.w += mul;
+        sdl_frect.h += mul;
+        SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
+        SDL_RenderFillRect(renderer, &sdl_frect);
+        return;
+    }
 
     for (uint8_t i = 0; i < 4; i++)
     {
-        ETHER_render_node_debug(renderer, node->quad[i].node);
+        ETHER_render_node_debug(renderer, node->branch.quad[i], mul);
     }
 }
 
@@ -70,7 +84,8 @@ void ETHER_render_debug(SDL_Renderer *renderer, ETHER_state *state)
     // DEBUG_INPUT_BINDING(move_left, 3)
     // DEBUG_INPUT_BINDING(move_right, 4)
 
-    ETHER_render_node_debug(renderer, state->quadtree->base);
+    // ETHER_render_node_debug(renderer, state->quadtree->base, state->mouse.x / 16);
+    ETHER_render_node_debug(renderer, state->quadtree->base, CHUNK_WORLD_SIZE);
 
     char *__fps = malloc(6);
     snprintf(__fps, 6, "%3.3lf", state->fps);
