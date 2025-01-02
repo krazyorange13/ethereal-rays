@@ -30,13 +30,12 @@ void ETHER_update(ETHER_state *state)
 
     for (ETHER_entity *p = state->entities->head; p != NULL; p = p->next)
     {
-        p->pos.x += (rand() % 3 - 1) % RENDER_WIDTH;
-        p->pos.y += (rand() % 3 - 1) % RENDER_HEIGHT;
+        p->pos.x += (rand() % 3 - 1);
+        p->pos.y += (rand() % 3 - 1);
     }
-
+    
     // sort entities by depth
     ETHER_insertion_sort(state->entities);
-
 }
 
 #define HANDLE_BOUND_INPUT(bind) \
@@ -53,12 +52,21 @@ void handle_event(SDL_Event *event, ETHER_state *state)
     {
         if (event->key.scancode == SDL_SCANCODE_Q)
             state->quit = TRUE;
+        
+        if (event->key.scancode == SDL_SCANCODE_SPACE)
+            state->update_textures = TRUE;
 
         SDL_Scancode code = event->key.scancode;
         HANDLE_BOUND_INPUT(move_up)
         HANDLE_BOUND_INPUT(move_down)
         HANDLE_BOUND_INPUT(move_right)
         HANDLE_BOUND_INPUT(move_left)
+    }
+    else if (event->type == SDL_EVENT_WINDOW_RESIZED)
+    {
+        int w, h;
+        SDL_GetWindowSize(state->sdl_window, &w, &h);
+        SDL_SetRenderLogicalPresentation(state->sdl_renderer, w / RENDER_RATIO, h / RENDER_RATIO, SDL_LOGICAL_PRESENTATION_INTEGER_SCALE);
     }
 }
 

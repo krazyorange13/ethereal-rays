@@ -14,6 +14,6 @@ struct _ETHER_renderer
 
 };
 
-void ETHER_render(SDL_Renderer *renderer, ETHER_state *state);
+void ETHER_render(ETHER_state *state);
 
 #endif

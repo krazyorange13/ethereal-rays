@@ -47,3 +47,16 @@ BOOL ETHER_vec2_in_rect_u16(ETHER_vec2_u16 pos, ETHER_rect_u16 rect)
     return pos.x >= rect.x && pos.x <= rect.x + rect.w
         && pos.y >= rect.y && pos.y <= rect.y + rect.h;
 }
+
+BOOL ETHER_rect_overlap_rect_u8(ETHER_rect_u8 a, ETHER_rect_u8 b)
+{
+    return a.x <= b.x + b.w
+        && b.x <= a.x + a.w
+        && a.y <= b.y + b.h
+        && b.y <= a.y + a.h;
+}
+
+SDL_FRect ETHER_rect_u16_to_sdl(ETHER_rect_u16 rect)
+{
+    return (SDL_FRect) { rect.x, rect.y, rect.w, rect.h };
+}

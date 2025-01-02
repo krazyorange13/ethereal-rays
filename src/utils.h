@@ -6,6 +6,8 @@
 #include "stdlib.h"
 #include "stdint.h"
 
+#include "SDL3/SDL.h"
+
 typedef uint8_t BOOL;
 #define FALSE 0
 #define TRUE 1
@@ -53,6 +55,8 @@ void ETHER_rect_u8_debug_inline(ETHER_rect_u8 rect);
 void ETHER_rect_u16_debug_inline(ETHER_rect_u16 rect);
 BOOL ETHER_vec2_in_rect_u8(ETHER_vec2_u8 pos, ETHER_rect_u8 rect);
 BOOL ETHER_vec2_in_rect_u16(ETHER_vec2_u16 pos, ETHER_rect_u16 rect);
+BOOL ETHER_rect_overlap_rect_u8(ETHER_rect_u8 a, ETHER_rect_u8 b);
+SDL_FRect ETHER_rect_u16_to_sdl(ETHER_rect_u16 rect);
 
 struct _ETHER_vec2_float
 {

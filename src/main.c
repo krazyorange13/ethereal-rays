@@ -12,7 +12,7 @@ int main()
 {
     SDL_Init(SDL_INIT_VIDEO);
 
-    SDL_Window *sdl_window = SDL_CreateWindow(WINDOW_TITLE, WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_BORDERLESS);
+    SDL_Window *sdl_window = SDL_CreateWindow(WINDOW_TITLE, WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_BORDERLESS | SDL_WINDOW_HIGH_PIXEL_DENSITY);
     SDL_Renderer *sdl_renderer = SDL_CreateRenderer(sdl_window, NULL);
     SDL_SetRenderVSync(sdl_renderer, 1);
     SDL_SetRenderLogicalPresentation(sdl_renderer, RENDER_WIDTH, RENDER_HEIGHT, SDL_LOGICAL_PRESENTATION_INTEGER_SCALE);
@@ -32,23 +32,33 @@ int main()
     for (int i = 0; i < ENTITY_COUNT; i++)
     {
         ETHER_entity *temp_entity = temp_entities + i;
-        temp_entity->texture = state_textures.gem;
-        temp_entity->pos.x = rand() % RENDER_WIDTH;
-        temp_entity->pos.y = rand() % RENDER_HEIGHT;
+        temp_entity->texture = state_textures.item;
+        temp_entity->pos.x = rand() % WINDOW_WIDTH;
+        temp_entity->pos.y = rand() % WINDOW_HEIGHT;
         ETHER_entities_add(&state_entities, temp_entity);
     }
 
     ETHER_state_quadtree state_quadtree;
     ETHER_node_create(&state_quadtree.base, NULL, 0);
 
-    ETHER_leaf *temp_leaf = ETHER_node_create_leaf(state_quadtree.base, (ETHER_vec2_u8) {0, 0});
-    printf("%p\n", temp_leaf);
-
-    ETHER_node_debug(state_quadtree.base);
+    for (uint8_t x = 0; x < QUADTREE_SIZE; x++)
+    {
+        for (uint8_t y = 0; y < QUADTREE_SIZE; y++)
+        {
+            ETHER_leaf *leaf = ETHER_node_create_leaf(state_quadtree.base, (ETHER_vec2_u8) {x, y});
+            for (uint8_t i = 0; i < CHUNK_SIZE * CHUNK_SIZE; i++)
+            {
+                leaf->chunk.blocks[i] = (x + y * QUADTREE_SIZE) % 20;
+            }
+        }
+    }
 
     ETHER_state state;
     state.fps = 0;
     state.quit = FALSE;
+    state.update_textures = FALSE;
+    state.sdl_window = sdl_window;
+    state.sdl_renderer = sdl_renderer;
     state.input = &state_input;
     state.keybinds = &state_keybinds;
     state.textures = &state_textures;
@@ -75,7 +85,7 @@ int main()
 
         ETHER_update(&state);
 
-        ETHER_render(sdl_renderer, &state);
+        ETHER_render(&state);
 
         prev_time = this_time;
         dt4 = dt3; dt3 = dt2; dt2 = dt1; dt1 = delta_time;

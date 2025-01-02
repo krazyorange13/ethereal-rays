@@ -13,16 +13,61 @@ ETHER_state_keybinds create_default_state_keybinds()
     return state;
 }
 
+#define LOAD_TEXTURE(var, path) \
+    var = IMG_LoadTexture(renderer, path); \
+    SDL_SetTextureScaleMode(var, SDL_SCALEMODE_NEAREST);
+
 void ETHER_state_textures_load(SDL_Renderer *renderer, ETHER_state_textures *textures)
 {
-    textures->player = IMG_LoadTexture(renderer, "res/player.png");
-    SDL_SetTextureScaleMode(textures->player, SDL_SCALEMODE_NEAREST);
+    LOAD_TEXTURE(textures->bricks, "res/bricks.png")
+    LOAD_TEXTURE(textures->bricks_deep, "res/bricks-deep.png")
+    LOAD_TEXTURE(textures->bricks_mossy, "res/bricks-mossy.png")
+    LOAD_TEXTURE(textures->bricks_sand, "res/bricks-sand.png")
+    LOAD_TEXTURE(textures->bricks_stone, "res/bricks-stone.png")
+    LOAD_TEXTURE(textures->dirt, "res/dirt.png")
+    LOAD_TEXTURE(textures->dirt_deep, "res/dirt-deep.png")
+    LOAD_TEXTURE(textures->dirt_gravel, "res/dirt-gravel.png")
+    LOAD_TEXTURE(textures->dirt_nature, "res/dirt-nature.png")
+    LOAD_TEXTURE(textures->leaves_1, "res/leaves-1.png")
+    LOAD_TEXTURE(textures->leaves_2, "res/leaves-2.png")
+    LOAD_TEXTURE(textures->slate, "res/slate.png")
+    LOAD_TEXTURE(textures->cool_rock, "res/some-cool-stone.png")
+    LOAD_TEXTURE(textures->item, "res/item.png")
+    LOAD_TEXTURE(textures->log_rowanoak_top, "res/log-rowanoak-top.png")
+    LOAD_TEXTURE(textures->log_rowanoak_side, "res/log-rowanoak-side.png")
+    LOAD_TEXTURE(textures->log_rowanoak_planks, "res/log-rowanoak-planks.png")
+    LOAD_TEXTURE(textures->log_mystic_top, "res/log-mystic-top.png")
+    LOAD_TEXTURE(textures->log_mystic_side, "res/log-mystic-side.png")
+    LOAD_TEXTURE(textures->grass, "res/grass.png")
+    LOAD_TEXTURE(textures->undef, "res/undef.png")
+}
 
-    textures->gem = IMG_LoadTexture(renderer, "res/gem.png");
-    SDL_SetTextureScaleMode(textures->gem, SDL_SCALEMODE_NEAREST);
-
-    textures->leaf = IMG_LoadTexture(renderer, "res/leaf.png");
-    SDL_SetTextureScaleMode(textures->leaf, SDL_SCALEMODE_NEAREST);
+SDL_Texture *ETHER_blockid_to_texture(ETHER_state_textures *textures, block_id_t id)
+{
+    switch (id)
+    {
+    case 0: return textures->bricks;
+    case 1: return textures->bricks_deep;
+    case 2: return textures->bricks_mossy;
+    case 3: return textures->bricks_sand;
+    case 4: return textures->bricks_stone;
+    case 5: return textures->dirt;
+    case 6: return textures->dirt_deep;
+    case 7: return textures->dirt_gravel;
+    case 8: return textures->dirt_nature;
+    case 9: return textures->leaves_1;
+    case 10: return textures->leaves_2;
+    case 11: return textures->slate;
+    case 12: return textures->item;
+    case 13: return textures->cool_rock;
+    case 14: return textures->log_rowanoak_top;
+    case 15: return textures->log_rowanoak_side;
+    case 16: return textures->log_rowanoak_planks;
+    case 17: return textures->log_mystic_top;
+    case 18: return textures->log_mystic_side;
+    case 19: return textures->grass;
+    default: return textures->undef;
+    }
 }
 
 void ETHER_move_entity(ETHER_entity *curr, ETHER_entity *dest_prev)
@@ -119,6 +164,7 @@ void ETHER_leaf_create(ETHER_leaf **leaf, ETHER_node *parent)
     (*leaf)->parent = parent;
     (*leaf)->rect_quadtree = parent->rect;
     (*leaf)->rect_world = ETHER_rect_quadtree_to_world(parent->rect);
+    (*leaf)->chunk.cache = NULL;
     memset((*leaf)->chunk.blocks, 0, sizeof((*leaf)->chunk.blocks));
     parent->branch.leaf = (*leaf);
     parent->is_leaf = TRUE;
@@ -254,8 +300,18 @@ ETHER_rect_u16 ETHER_rect_quadtree_to_world(ETHER_rect_u8 rect)
     return (ETHER_rect_u16) {
         rect.x * CHUNK_WORLD_SIZE,
         rect.y * CHUNK_WORLD_SIZE,
-        rect.w * CHUNK_WORLD_SIZE,
-        rect.h * CHUNK_WORLD_SIZE
+        (rect.w + 1) * CHUNK_WORLD_SIZE,
+        (rect.h + 1) * CHUNK_WORLD_SIZE
+    };
+}
+
+ETHER_rect_u8 ETHER_rect_world_to_quadtree(ETHER_rect_u16 rect)
+{
+    return (ETHER_rect_u8) {
+        rect.x / CHUNK_WORLD_SIZE,
+        rect.y / CHUNK_WORLD_SIZE,
+        rect.w / CHUNK_WORLD_SIZE,
+        rect.h / CHUNK_WORLD_SIZE
     };
 }
 
@@ -280,4 +336,45 @@ void _ETHER_node_debug(ETHER_node *node, uint8_t depth)
 void ETHER_node_debug(ETHER_node *node)
 {
     _ETHER_node_debug(node, 0);
+}
+
+void _ETHER_node_get_rect_leaves(ETHER_node *node, ETHER_rect_u8 rect, ETHER_array *array)
+{
+    if (node == NULL)
+        return;
+
+    if (ETHER_rect_overlap_rect_u8(rect, node->rect))
+    {
+        if (node->is_leaf)
+        {
+            array->data[array->len] = node->branch.leaf;
+            array->len++;
+        }
+        else
+        {
+            for (uint8_t i = 0; i < 4; i++)
+            {
+                _ETHER_node_get_rect_leaves(node->branch.quad[i], rect, array);
+            }
+        }
+    }
+}
+
+ETHER_array *ETHER_node_get_rect_leaves(ETHER_node *node, ETHER_rect_u8 rect)
+{
+    ETHER_array *array = malloc(sizeof(ETHER_array));
+    uint8_t leaves_x = RENDER_WIDTH / CHUNK_WORLD_SIZE + 1;
+    uint8_t leaves_y = RENDER_HEIGHT / CHUNK_WORLD_SIZE + 1;
+    array->space = leaves_x * leaves_y;
+    array->len = 0;
+    array->data = malloc(sizeof(ETHER_leaf *) * array->space);
+    memset(array->data, 0, sizeof(ETHER_leaf *) * array->space);
+
+    _ETHER_node_get_rect_leaves(node, rect, array);
+    return array;
+}
+
+void ETHER_array_debug(ETHER_array *array)
+{
+    printf("array len %d space %ld\n", array->len, array->space);
 }
