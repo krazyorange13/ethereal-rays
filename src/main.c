@@ -23,21 +23,6 @@ int main()
     ETHER_state_textures state_textures = {};
     ETHER_state_textures_load(sdl_renderer, &state_textures);
 
-    ETHER_state_entities state_entities = {};
-
-    #define ENTITY_COUNT 1000
-
-    srand(time(NULL));
-    ETHER_entity *temp_entities = malloc(sizeof(ETHER_entity) * ENTITY_COUNT);
-    for (int i = 0; i < ENTITY_COUNT; i++)
-    {
-        ETHER_entity *temp_entity = temp_entities + i;
-        temp_entity->texture = state_textures.item;
-        temp_entity->pos.x = rand() % WINDOW_WIDTH;
-        temp_entity->pos.y = rand() % WINDOW_HEIGHT;
-        ETHER_entities_add(&state_entities, temp_entity);
-    }
-
     ETHER_state_quadtree state_quadtree;
     ETHER_node_create(&state_quadtree.base, NULL, 0);
 
@@ -48,10 +33,28 @@ int main()
             ETHER_leaf *leaf = ETHER_node_create_leaf(state_quadtree.base, (ETHER_vec2_u8) {x, y});
             for (uint8_t i = 0; i < CHUNK_SIZE * CHUNK_SIZE; i++)
             {
-                leaf->chunk.blocks[i] = (x + y * QUADTREE_SIZE) % 20;
+                leaf->chunk.blocks[i] = 1;//(x + y * QUADTREE_SIZE) % 20;
             }
         }
     }
+
+    ETHER_state_entities state_entities = {};
+
+    #define ENTITY_COUNT 5
+
+    srand(time(NULL));
+    ETHER_entity *entities = malloc(sizeof(ETHER_entity) * ENTITY_COUNT);
+    memset(entities, 0, sizeof(ETHER_entity) * ENTITY_COUNT);
+    for (int i = 0; i < ENTITY_COUNT; i++)
+    {
+        ETHER_entity *entity = entities + i;
+        ETHER_entity_create_prealloc(&entity);
+        entity->tex = state_textures.item;
+        entity->rect = (ETHER_rect_u16) { rand() % RENDER_WIDTH, rand() % RENDER_HEIGHT, ENTITY_SIZE, ENTITY_SIZE };
+        ETHER_buckets_add(&state_quadtree, entity);
+        ETHER_entities_add(&state_entities, entity);
+    }
+
 
     ETHER_state state;
     state.fps = 0;

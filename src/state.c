@@ -70,6 +70,21 @@ SDL_Texture *ETHER_blockid_to_texture(ETHER_state_textures *textures, block_id_t
     }
 }
 
+void ETHER_entity_create(ETHER_entity **entity)
+{
+    (*entity) = malloc(sizeof(ETHER_entity));
+    (*entity)->next = NULL;
+    (*entity)->prev = NULL;
+    (*entity)->tex = NULL;
+}
+
+void ETHER_entity_create_prealloc(ETHER_entity **entity)
+{
+    (*entity)->next = NULL;
+    (*entity)->prev = NULL;
+    (*entity)->tex = NULL;
+}
+
 void ETHER_move_entity(ETHER_entity *curr, ETHER_entity *dest_prev)
 {
     ETHER_entity *dest_next = dest_prev->next;
@@ -157,6 +172,60 @@ ETHER_entity *ETHER_entities_pop(ETHER_state_entities *entities)
     }
 }
 
+void ETHER_buckets_add(ETHER_state_quadtree *quadtree, ETHER_entity *entity)
+{
+    ETHER_array *leaves = ETHER_node_get_rect_leaves(quadtree->base, ETHER_rect_world_to_quadtree_2(entity->rect));
+    for (uint8_t i = 0; i < leaves->len; i++)
+    {
+        if (leaves->data[i] == NULL)
+            continue;
+        ETHER_leaf *leaf = (ETHER_leaf *) leaves->data[i];
+        ETHER_bucket_add(&leaf->bucket, entity);
+    }
+    free(leaves);
+}
+
+void ETHER_bucket_add(ETHER_bucket *bucket, ETHER_entity *entity)
+{
+    for (ETHER_entity_node *node = bucket->head; node != NULL; node = node->next)
+    {
+        if (node->curr == entity)
+        {
+            printf("bucket add entity: already present! %p %p\n", bucket, entity);
+            return;
+        }
+    }
+
+    ETHER_entity_node *node = malloc(sizeof(ETHER_entity_node));
+    node->curr = entity;
+    node->next = NULL;
+    node->prev = bucket->tail;
+    if (bucket->tail) bucket->tail->next = node;
+    bucket->tail = node;
+    if (!bucket->head) bucket->head = node;
+
+    printf("bucket add entity: successful %p %p\n", bucket, entity);
+}
+
+void ETHER_bucket_remove(ETHER_bucket *bucket, ETHER_entity *entity)
+{
+    for (ETHER_entity_node *node = bucket->head; node != NULL; node = node->next)
+    {
+        if (node->curr == entity)
+        {
+            if (node->prev) node->prev->next = node->next;
+            if (node->next) node->next->prev = node->prev;
+            if (bucket->head == node) bucket->head = node->next;
+            if (bucket->tail == node) bucket->tail = node->prev;
+            free(node);
+            printf("bucket remove entity: successful %p %p\n", bucket, entity);
+            return;
+        }
+    }
+
+    printf("bucket remove entity: not found! %p %p\n", bucket, entity);
+}
+
 void ETHER_leaf_create(ETHER_leaf **leaf, ETHER_node *parent)
 {
     if (!parent) return;
@@ -166,6 +235,9 @@ void ETHER_leaf_create(ETHER_leaf **leaf, ETHER_node *parent)
     (*leaf)->rect_world = ETHER_rect_quadtree_to_world(parent->rect);
     (*leaf)->chunk.cache = NULL;
     memset((*leaf)->chunk.blocks, 0, sizeof((*leaf)->chunk.blocks));
+    (*leaf)->bucket.head = NULL;
+    (*leaf)->bucket.tail = NULL;
+    (*leaf)->bucket.parent = (*leaf);
     parent->branch.leaf = (*leaf);
     parent->is_leaf = TRUE;
 }
@@ -312,6 +384,22 @@ ETHER_rect_u8 ETHER_rect_world_to_quadtree(ETHER_rect_u16 rect)
         rect.y / CHUNK_WORLD_SIZE,
         rect.w / CHUNK_WORLD_SIZE,
         rect.h / CHUNK_WORLD_SIZE
+    };
+}
+
+ETHER_rect_u8 ETHER_rect_world_to_quadtree_2(ETHER_rect_u16 rect)
+{
+    // return (ETHER_rect_u8) {
+    //     CEILING(_d( (float) rect.x / (float) CHUNK_WORLD_SIZE )) - 1,
+    //     CEILING(_d( (float) rect.y / (float) CHUNK_WORLD_SIZE )) - 1,
+    //     CEILING(_d( (float) rect.w / (float) CHUNK_WORLD_SIZE )) - 1,
+    //     CEILING(_d( (float) rect.h / (float) CHUNK_WORLD_SIZE )) - 1
+    // };
+    return (ETHER_rect_u8) {
+        (float) rect.x / CHUNK_WORLD_SIZE,
+        (float) rect.y / CHUNK_WORLD_SIZE,
+        ((float) rect.w / CHUNK_WORLD_SIZE + (float) rect.x / CHUNK_WORLD_SIZE) - (rect.x / CHUNK_WORLD_SIZE),
+        ((float) rect.h / CHUNK_WORLD_SIZE + (float) rect.y / CHUNK_WORLD_SIZE) - (rect.y / CHUNK_WORLD_SIZE)
     };
 }
 

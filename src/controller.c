@@ -3,6 +3,7 @@
 #include "settings.h"
 
 void handle_event(SDL_Event *event, ETHER_state *state);
+// void handle_input(ETHER_state *state);
 void ETHER_insertion_sort(ETHER_state_entities *entities);
 
 void ETHER_entities_debug(ETHER_state_entities *entities, ETHER_entity *marker0, ETHER_entity *marker1, ETHER_entity *marker2)
@@ -13,7 +14,7 @@ void ETHER_entities_debug(ETHER_state_entities *entities, ETHER_entity *marker0,
         if (entity == marker0) printf("\x1b[31m");
         if (entity == marker1) printf("\x1b[32m");
         if (entity == marker2) printf("\x1b[33m");
-        printf("%d\x1b[0m ", entity->pos.y);
+        printf("%d\x1b[0m ", entity->rect.y);
     }
     printf("\n");
 }
@@ -28,10 +29,51 @@ void ETHER_update(ETHER_state *state)
     
     SDL_GetMouseState(&state->mouse.x, &state->mouse.y);
 
-    for (ETHER_entity *p = state->entities->head; p != NULL; p = p->next)
+    // handle_input(state);
+
+    for (ETHER_entity *entity = state->entities->head; entity != NULL; entity = entity->next)
     {
-        p->pos.x += (rand() % 3 - 1);
-        p->pos.y += (rand() % 3 - 1);
+        ETHER_rect_u16 entity_rect_old = entity->rect;
+
+        entity->rect.x += (rand() % 5 - 2);
+        entity->rect.y += (rand() % 5 - 2);
+
+        // handle_input(state);
+
+        if (ETHER_rects_equal_u16(entity_rect_old, entity->rect))
+            continue;
+        
+        ETHER_rect_u8 rect_qt_old = ETHER_rect_world_to_quadtree_2(entity_rect_old);
+        ETHER_rect_u8 rect_qt_new = ETHER_rect_world_to_quadtree_2(entity->rect);
+        ETHER_array *leaves_old = ETHER_node_get_rect_leaves(state->quadtree->base, rect_qt_old);
+        ETHER_array *leaves_new = ETHER_node_get_rect_leaves(state->quadtree->base, rect_qt_new);
+        for (uint8_t i = 0; i < leaves_new->len; i++)
+        {
+            for (uint8_t j = 0; j < leaves_old->len; j++)
+            {
+                if (leaves_new->data[i] == leaves_old->data[j])
+                {
+                    leaves_new->data[i] = NULL;
+                    leaves_old->data[j] = NULL;
+                }
+            }
+        }
+        for (uint8_t i = 0; i < leaves_new->len; i++)
+        {
+            if (leaves_new->data[i] == NULL)
+                continue;
+            ETHER_leaf *leaf = leaves_new->data[i];
+            ETHER_bucket_add(&leaf->bucket, entity);
+        }
+        for (uint8_t j = 0; j < leaves_old->len; j++)
+        {
+            if (leaves_old->data[j] == NULL)
+                continue;
+            ETHER_leaf *leaf = leaves_old->data[j];
+            ETHER_bucket_remove(&leaf->bucket, entity);
+        }
+        free(leaves_old);
+        free(leaves_new);
     }
     
     // sort entities by depth
@@ -70,7 +112,15 @@ void handle_event(SDL_Event *event, ETHER_state *state)
     }
 }
 
-#define SORT_CHECK(left, right) (!left || (right->pos.y >= left->pos.y))
+// void handle_input(ETHER_state *state)
+// {
+//     if (state->input->move_up) state->player->rect.y -= 2;
+//     if (state->input->move_down) state->player->rect.y += 2;
+//     if (state->input->move_left) state->player->rect.x -= 2;
+//     if (state->input->move_right) state->player->rect.x += 2;
+// }
+
+#define SORT_CHECK(left, right) (!left || (right->rect.y <= left->rect.y))
 
 void ETHER_insertion_sort(ETHER_state_entities *entities)
 {
