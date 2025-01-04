@@ -54,14 +54,6 @@ struct _ETHER_state_entities
     ETHER_entity *tail;
 };
 
-struct _ETHER_entity
-{
-    ETHER_rect_u16 rect;
-    SDL_Texture *tex;
-    struct _ETHER_entity *next;
-    struct _ETHER_entity *prev;
-};
-
 void ETHER_entity_create(ETHER_entity **entity);
 void ETHER_entity_create_prealloc(ETHER_entity **entity);
 void ETHER_move_entity(ETHER_entity *curr, ETHER_entity *dest_prev);
@@ -117,12 +109,15 @@ typedef union _ETHER_branch ETHER_branch;
 typedef struct _ETHER_node ETHER_node;
 typedef struct _ETHER_leaf ETHER_leaf;
 typedef struct _ETHER_entity_node ETHER_entity_node;
+typedef struct _ETHER_bucket_node ETHER_bucket_node;
 typedef struct _ETHER_bucket ETHER_bucket;
 typedef struct _ETHER_array ETHER_array;
 
 struct _ETHER_state_quadtree
 {
     ETHER_node *base;
+    ETHER_leaf *leaves_head;
+    ETHER_leaf *leaves_tail;
 };
 
 struct _ETHER_chunk
@@ -155,11 +150,28 @@ struct _ETHER_entity_node
     ETHER_entity *curr;
 };
 
+struct _ETHER_bucket_node
+{
+    struct _ETHER_bucket_node *prev;
+    struct _ETHER_bucket_node *next;
+    ETHER_bucket *curr;
+};
+
+struct _ETHER_entity
+{
+    ETHER_rect_u16 rect;
+    SDL_Texture *tex;
+    struct _ETHER_entity *next;
+    struct _ETHER_entity *prev;
+    ETHER_bucket_node *bucket_head;
+    ETHER_bucket_node *bucket_tail;
+};
+
 struct _ETHER_bucket
 {
     ETHER_leaf *parent;
-    ETHER_entity_node *head;
-    ETHER_entity_node *tail;
+    ETHER_entity_node *entity_head;
+    ETHER_entity_node *entity_tail;
 };
 
 struct _ETHER_leaf
@@ -169,16 +181,18 @@ struct _ETHER_leaf
     ETHER_rect_u16 rect_world;
     ETHER_chunk chunk;
     ETHER_bucket bucket;
+    struct _ETHER_leaf *next;
+    struct _ETHER_leaf *prev;
 };
 
 void ETHER_buckets_add(ETHER_state_quadtree *quadtree, ETHER_entity *entity);
 void ETHER_bucket_add(ETHER_bucket *bucket, ETHER_entity *entity);
 void ETHER_bucket_remove(ETHER_bucket *bucket, ETHER_entity *entity);
 
-void ETHER_leaf_create(ETHER_leaf **leaf, ETHER_node *parent);
+void ETHER_leaf_create(ETHER_leaf **leaf, ETHER_node *parent, ETHER_state_quadtree *quadtree);
 void ETHER_node_create(ETHER_node **node, ETHER_node *parent, uint8_t ppos);
 void ETHER_node_subdivide(ETHER_node *node);
-ETHER_leaf *ETHER_node_create_leaf(ETHER_node *node, ETHER_vec2_u8 pos);
+ETHER_leaf *ETHER_node_create_leaf(ETHER_node *node, ETHER_vec2_u8 pos, ETHER_state_quadtree *quadtree);
 BOOL ETHER_node_isend(ETHER_node *node);
 uint8_t ETHER_node_get_quadrant(ETHER_node *node, ETHER_vec2_u8 pos);
 uint8_t ETHER_node_get_depth(ETHER_node *node);
@@ -190,6 +204,8 @@ ETHER_rect_u8 ETHER_rect_world_to_quadtree_2(ETHER_rect_u16 rect);
 void ETHER_node_debug(ETHER_node *node);
 ETHER_array *ETHER_node_get_rect_leaves(ETHER_node *node, ETHER_rect_u8 rect);
 void ETHER_array_debug(ETHER_array *array);
+void ETHER_array_create(ETHER_array **array);
+void ETHER_array_destroy(ETHER_array *array);
 
 struct _ETHER_array
 {

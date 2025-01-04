@@ -12,9 +12,12 @@ typedef uint8_t BOOL;
 #define FALSE 0
 #define TRUE 1
 
-#define CEILING_POS(X) ((X-(int)(X)) > 0 ? (int)(X+1) : (int)(X))
-#define CEILING_NEG(X) (int)(X)
-#define CEILING(X) ( ((X) > 0) ? CEILING_POS(X) : CEILING_NEG(X) )
+#define CEIL_POS(X) ((X-(int)(X)) > 0 ? (int)(X+1) : (int)(X))
+#define CEIL_NEG(X) (int)(X)
+#define CEIL(X) (((X) > 0) ? CEIL_POS(X) : CEIL_NEG(X))
+#define ABS(X) (((X) < 0) ? -(X) : (X))
+#define SIGN(X) (((X) < 0) ? -1 : 1)
+#define CLAMP(X, MIN, MAX) ((((X) < (MIN)) ? (MIN) : (X)) > (MAX) ? (MAX) : (X))
 
 typedef struct _ETHER_vec2_u8 ETHER_vec2_u8;
 typedef struct _ETHER_vec2_u16 ETHER_vec2_u16;

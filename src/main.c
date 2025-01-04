@@ -25,12 +25,14 @@ int main()
 
     ETHER_state_quadtree state_quadtree;
     ETHER_node_create(&state_quadtree.base, NULL, 0);
+    state_quadtree.leaves_head = NULL;
+    state_quadtree.leaves_tail = NULL;
 
     for (uint8_t x = 0; x < QUADTREE_SIZE; x++)
     {
         for (uint8_t y = 0; y < QUADTREE_SIZE; y++)
         {
-            ETHER_leaf *leaf = ETHER_node_create_leaf(state_quadtree.base, (ETHER_vec2_u8) {x, y});
+            ETHER_leaf *leaf = ETHER_node_create_leaf(state_quadtree.base, (ETHER_vec2_u8) {x, y}, &state_quadtree);
             for (uint8_t i = 0; i < CHUNK_SIZE * CHUNK_SIZE; i++)
             {
                 leaf->chunk.blocks[i] = 1;//(x + y * QUADTREE_SIZE) % 20;
@@ -40,7 +42,7 @@ int main()
 
     ETHER_state_entities state_entities = {};
 
-    #define ENTITY_COUNT 5
+    #define ENTITY_COUNT 1000
 
     srand(time(NULL));
     ETHER_entity *entities = malloc(sizeof(ETHER_entity) * ENTITY_COUNT);
