@@ -2,89 +2,27 @@
 
 #include "settings.h"
 
-void handle_event(SDL_Event *event, ETHER_state *state);
-// void handle_input(ETHER_state *state);
-void ETHER_insertion_sort(ETHER_state_entities *entities);
-
-void ETHER_entities_debug(ETHER_state_entities *entities, ETHER_entity *marker0, ETHER_entity *marker1, ETHER_entity *marker2)
-{
-    printf("\t");
-    for (ETHER_entity *entity = entities->head; entity != NULL; entity = entity->next)
-    {
-        if (entity == marker0) printf("\x1b[31m");
-        if (entity == marker1) printf("\x1b[32m");
-        if (entity == marker2) printf("\x1b[33m");
-        printf("%d\x1b[0m ", entity->rect.y);
-    }
-    printf("\n");
-}
-
 void ETHER_update(ETHER_state *state)
 {
     SDL_Event event;
     while (SDL_PollEvent(&event))
     {
-        handle_event(&event, state);
+        ETHER_handle_event(&event, state);
     }
     
     SDL_GetMouseState(&state->mouse.x, &state->mouse.y);
 
-    // handle_input(state);
+    ETHER_handle_entities(state);
 
-    for (ETHER_entity *entity = state->entities->head; entity != NULL; entity = entity->next)
-    {
-        ETHER_rect_u16 entity_rect_old = entity->rect;
-
-        entity->rect.x += (rand() % 5 - 2);
-        entity->rect.y += (rand() % 5 - 2);
-
-        // handle_input(state);
-
-        if (ETHER_rects_equal_u16(entity_rect_old, entity->rect))
-            continue;
-        
-        ETHER_rect_u8 rect_qt_old = ETHER_rect_world_to_quadtree_2(entity_rect_old);
-        ETHER_rect_u8 rect_qt_new = ETHER_rect_world_to_quadtree_2(entity->rect);
-        ETHER_array *leaves_old = ETHER_node_get_rect_leaves(state->quadtree->base, rect_qt_old);
-        ETHER_array *leaves_new = ETHER_node_get_rect_leaves(state->quadtree->base, rect_qt_new);
-        for (uint8_t i = 0; i < leaves_new->len; i++)
-        {
-            for (uint8_t j = 0; j < leaves_old->len; j++)
-            {
-                if (leaves_new->data[i] == leaves_old->data[j])
-                {
-                    leaves_new->data[i] = NULL;
-                    leaves_old->data[j] = NULL;
-                }
-            }
-        }
-        for (uint8_t i = 0; i < leaves_new->len; i++)
-        {
-            if (leaves_new->data[i] == NULL)
-                continue;
-            ETHER_leaf *leaf = leaves_new->data[i];
-            ETHER_bucket_add(&leaf->bucket, entity);
-        }
-        for (uint8_t j = 0; j < leaves_old->len; j++)
-        {
-            if (leaves_old->data[j] == NULL)
-                continue;
-            ETHER_leaf *leaf = leaves_old->data[j];
-            ETHER_bucket_remove(&leaf->bucket, entity);
-        }
-        free(leaves_old);
-        free(leaves_new);
-    }
     
-    // sort entities by depth
-    ETHER_insertion_sort(state->entities);
+    
 }
 
 #define HANDLE_BOUND_INPUT(bind) \
     if (code == state->keybinds->bind) \
         state->input->bind = (event->type == SDL_EVENT_KEY_DOWN); \
 
-void handle_event(SDL_Event *event, ETHER_state *state)
+void ETHER_handle_event(SDL_Event *event, ETHER_state *state)
 {
     if (event->type == SDL_EVENT_QUIT)
     {
@@ -112,17 +50,127 @@ void handle_event(SDL_Event *event, ETHER_state *state)
     }
 }
 
-// void handle_input(ETHER_state *state)
-// {
-//     if (state->input->move_up) state->player->rect.y -= 2;
-//     if (state->input->move_down) state->player->rect.y += 2;
-//     if (state->input->move_left) state->player->rect.x -= 2;
-//     if (state->input->move_right) state->player->rect.x += 2;
-// }
+void ETHER_handle_entities(ETHER_state *state)
+{
+    ETHER_entities_depth_sort(state->entities);
+    for (ETHER_entity *entity = state->entities->head; entity != NULL; entity = entity->next)
+    {
+        ETHER_rect_u16 entity_rect_old = entity->rect;
+
+        entity->rect.x += (rand() % 3) - 1;
+        entity->rect.y += (rand() % 3) - 1;
+        entity->rect.x %= RENDER_WIDTH;
+        entity->rect.y %= RENDER_HEIGHT;
+        
+        ETHER_handle_entity_collisions(entity);
+        ETHER_handle_entity_buckets(state->quadtree, entity, entity_rect_old);
+    }
+
+}
+
+void ETHER_handle_entity_buckets(ETHER_state_quadtree *quadtree, ETHER_entity *entity, ETHER_rect_u16 entity_rect_old)
+{
+
+    if (ETHER_rects_equal_u16(entity_rect_old, entity->rect))
+        return;
+    
+    ETHER_rect_u8 rect_qt_old = ETHER_rect_world_to_quadtree_2(entity_rect_old);
+    ETHER_rect_u8 rect_qt_new = ETHER_rect_world_to_quadtree_2(entity->rect);
+    ETHER_array *leaves_old = ETHER_node_get_rect_leaves(quadtree->base, rect_qt_old);
+    ETHER_array *leaves_new = ETHER_node_get_rect_leaves(quadtree->base, rect_qt_new);
+    for (uint8_t i = 0; i < leaves_new->len; i++)
+    {
+        for (uint8_t j = 0; j < leaves_old->len; j++)
+        {
+            if (leaves_new->data[i] == leaves_old->data[j])
+            {
+                leaves_new->data[i] = NULL;
+                leaves_old->data[j] = NULL;
+            }
+        }
+    }
+    for (uint8_t i = 0; i < leaves_new->len; i++)
+    {
+        if (leaves_new->data[i] == NULL)
+            continue;
+        ETHER_leaf *leaf = leaves_new->data[i];
+        ETHER_bucket_add(&leaf->bucket, entity);
+    }
+    for (uint8_t j = 0; j < leaves_old->len; j++)
+    {
+        if (leaves_old->data[j] == NULL)
+            continue;
+        ETHER_leaf *leaf = leaves_old->data[j];
+        ETHER_bucket_remove(&leaf->bucket, entity);
+    }
+
+    ETHER_array_destroy(leaves_old);
+    ETHER_array_destroy(leaves_new);
+}
+
+void ETHER_handle_entity_collisions(ETHER_entity *entity)
+{
+    for (ETHER_bucket_node *node = entity->bucket_head; node != NULL; node = node->next)
+    {
+        ETHER_bucket *bucket = node->curr;
+        for (ETHER_entity_node *other = bucket->entity_head; other != NULL; other = other->next)
+        {
+            if (entity == other->curr) continue;
+            ETHER_rect_u16 *entity_rect = &entity->rect;
+            ETHER_rect_u16 *other_rect = &other->curr->rect;
+            if (!ETHER_rect_overlap_rect_u16(*entity_rect, *other_rect)) continue;
+            int16_t delta_x = other_rect->x - entity_rect->x;
+            int16_t delta_y = other_rect->y - entity_rect->y;
+            int16_t move_x = ((ABS(delta_x))) * 0.125 * SIGN(delta_x);
+            int16_t move_y = ((ABS(delta_y))) * 0.125 * SIGN(delta_y);
+            entity_rect->x -= move_x;
+            entity_rect->y -= move_y;
+            break;
+        }
+    }
+}
+
+void ETHER_handle_entities_collisions(ETHER_state_quadtree *quadtree)
+{
+    for (ETHER_leaf *leaf = quadtree->leaves_head; leaf != NULL; leaf = leaf->next)
+    {
+        for (ETHER_entity_node *entity_node = leaf->bucket.entity_head; entity_node != NULL; entity_node = entity_node->next)
+        {
+            for (ETHER_entity_node *other_node = leaf->bucket.entity_head; other_node != NULL; other_node = other_node->next)
+            {
+                if (entity_node == other_node) continue;
+                ETHER_rect_u16 *entity_rect = &entity_node->curr->rect;
+                ETHER_rect_u16 *other_rect = &other_node->curr->rect;
+                if (!ETHER_rect_overlap_rect_u16(*entity_rect, *other_rect)) continue;
+                int16_t delta_x = other_rect->x - entity_rect->x;
+                int16_t delta_y = other_rect->y - entity_rect->y;
+                int16_t move_x = ((ENTITY_SIZE / 2) - ABS(delta_x)) * SIGN(delta_x);
+                int16_t move_y = ((ENTITY_SIZE / 2) - ABS(delta_y)) * SIGN(delta_y);
+                entity_rect->x -= move_x;
+                entity_rect->y -= move_y;
+                other_rect->x += move_x;
+                other_rect->y += move_y;
+            }
+        }
+    }
+}
+
+void ETHER_entities_debug(ETHER_state_entities *entities, ETHER_entity *marker0, ETHER_entity *marker1, ETHER_entity *marker2)
+{
+    printf("\t");
+    for (ETHER_entity *entity = entities->head; entity != NULL; entity = entity->next)
+    {
+        if (entity == marker0) printf("\x1b[31m");
+        if (entity == marker1) printf("\x1b[32m");
+        if (entity == marker2) printf("\x1b[33m");
+        printf("%d\x1b[0m ", entity->rect.y);
+    }
+    printf("\n");
+}
 
 #define SORT_CHECK(left, right) (!left || (right->rect.y <= left->rect.y))
 
-void ETHER_insertion_sort(ETHER_state_entities *entities)
+void ETHER_entities_depth_sort(ETHER_state_entities *entities)
 {
     if (!entities->head || !entities->head->next)
         return;

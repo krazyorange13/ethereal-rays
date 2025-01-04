@@ -76,6 +76,8 @@ void ETHER_entity_create(ETHER_entity **entity)
     (*entity)->next = NULL;
     (*entity)->prev = NULL;
     (*entity)->tex = NULL;
+    (*entity)->bucket_head = NULL;
+    (*entity)->bucket_tail = NULL;
 }
 
 void ETHER_entity_create_prealloc(ETHER_entity **entity)
@@ -83,6 +85,8 @@ void ETHER_entity_create_prealloc(ETHER_entity **entity)
     (*entity)->next = NULL;
     (*entity)->prev = NULL;
     (*entity)->tex = NULL;
+    (*entity)->bucket_head = NULL;
+    (*entity)->bucket_tail = NULL;
 }
 
 void ETHER_move_entity(ETHER_entity *curr, ETHER_entity *dest_prev)
@@ -187,11 +191,11 @@ void ETHER_buckets_add(ETHER_state_quadtree *quadtree, ETHER_entity *entity)
 
 void ETHER_bucket_add(ETHER_bucket *bucket, ETHER_entity *entity)
 {
-    for (ETHER_entity_node *node = bucket->head; node != NULL; node = node->next)
+    for (ETHER_entity_node *node = bucket->entity_head; node != NULL; node = node->next)
     {
         if (node->curr == entity)
         {
-            printf("bucket add entity: already present! %p %p\n", bucket, entity);
+            // printf("bucket add entity: already present! %p %p\n", bucket, entity);
             return;
         }
     }
@@ -199,34 +203,57 @@ void ETHER_bucket_add(ETHER_bucket *bucket, ETHER_entity *entity)
     ETHER_entity_node *node = malloc(sizeof(ETHER_entity_node));
     node->curr = entity;
     node->next = NULL;
-    node->prev = bucket->tail;
-    if (bucket->tail) bucket->tail->next = node;
-    bucket->tail = node;
-    if (!bucket->head) bucket->head = node;
+    node->prev = bucket->entity_tail;
+    if (bucket->entity_tail) bucket->entity_tail->next = node;
+    bucket->entity_tail = node;
+    if (!bucket->entity_head) bucket->entity_head = node;
 
-    printf("bucket add entity: successful %p %p\n", bucket, entity);
+    ETHER_bucket_node *bucket_node = malloc(sizeof(ETHER_bucket_node));
+    bucket_node->curr = bucket;
+    bucket_node->prev = NULL;
+    bucket_node->next = NULL;
+    if (!entity->bucket_head) entity->bucket_head = bucket_node;
+    if (entity->bucket_tail) entity->bucket_tail->next = bucket_node;
+    bucket_node->prev = entity->bucket_tail;
+    entity->bucket_tail = bucket_node;
+
+    // printf("bucket add entity: successful %p %p\n", bucket, entity);
 }
 
 void ETHER_bucket_remove(ETHER_bucket *bucket, ETHER_entity *entity)
 {
-    for (ETHER_entity_node *node = bucket->head; node != NULL; node = node->next)
+    for (ETHER_entity_node *node = bucket->entity_head; node != NULL; node = node->next)
     {
         if (node->curr == entity)
         {
             if (node->prev) node->prev->next = node->next;
             if (node->next) node->next->prev = node->prev;
-            if (bucket->head == node) bucket->head = node->next;
-            if (bucket->tail == node) bucket->tail = node->prev;
+            if (bucket->entity_head == node) bucket->entity_head = node->next;
+            if (bucket->entity_tail == node) bucket->entity_tail = node->prev;
             free(node);
-            printf("bucket remove entity: successful %p %p\n", bucket, entity);
-            return;
+            // printf("bucket remove entity: successful %p %p\n", bucket, entity);
+            break;
         }
     }
 
-    printf("bucket remove entity: not found! %p %p\n", bucket, entity);
+    for (ETHER_bucket_node *node = entity->bucket_head; node != NULL; node = node->next)
+    {
+        if (node->curr == bucket)
+        {
+            if (node->prev) node->prev->next = node->next;
+            if (node->next) node->next->prev = node->prev;
+            if (entity->bucket_head == node) entity->bucket_head = node->next;
+            if (entity->bucket_tail == node) entity->bucket_tail = node->prev;
+            free(node);
+            // printf("entity remove bucket: successful %p %p\n", bucket, entity);
+            break;
+        }
+    }
+
+    // printf("bucket remove entity: not found! %p %p\n", bucket, entity);
 }
 
-void ETHER_leaf_create(ETHER_leaf **leaf, ETHER_node *parent)
+void ETHER_leaf_create(ETHER_leaf **leaf, ETHER_node *parent, ETHER_state_quadtree *quadtree)
 {
     if (!parent) return;
     (*leaf) = malloc(sizeof(ETHER_leaf));
@@ -235,11 +262,17 @@ void ETHER_leaf_create(ETHER_leaf **leaf, ETHER_node *parent)
     (*leaf)->rect_world = ETHER_rect_quadtree_to_world(parent->rect);
     (*leaf)->chunk.cache = NULL;
     memset((*leaf)->chunk.blocks, 0, sizeof((*leaf)->chunk.blocks));
-    (*leaf)->bucket.head = NULL;
-    (*leaf)->bucket.tail = NULL;
+    (*leaf)->bucket.entity_head = NULL;
+    (*leaf)->bucket.entity_tail = NULL;
     (*leaf)->bucket.parent = (*leaf);
     parent->branch.leaf = (*leaf);
     parent->is_leaf = TRUE;
+    (*leaf)->next = NULL;
+    (*leaf)->prev = NULL;
+    if (!quadtree->leaves_head) quadtree->leaves_head = (*leaf);
+    if (quadtree->leaves_tail) quadtree->leaves_tail->next = (*leaf);
+    (*leaf)->prev = quadtree->leaves_tail;
+    quadtree->leaves_tail = (*leaf);
 }
 
 void ETHER_node_create(ETHER_node **node, ETHER_node *parent, uint8_t ppos)
@@ -270,7 +303,7 @@ void ETHER_node_subdivide(ETHER_node *node)
     ETHER_node_create(&quad3, node, 3);
 }
 
-ETHER_leaf *ETHER_node_create_leaf(ETHER_node *node, ETHER_vec2_u8 pos)
+ETHER_leaf *ETHER_node_create_leaf(ETHER_node *node, ETHER_vec2_u8 pos, ETHER_state_quadtree *quadtree)
 {
     if (!ETHER_vec2_in_rect_u8(pos, node->rect))
         return NULL;
@@ -284,7 +317,7 @@ ETHER_leaf *ETHER_node_create_leaf(ETHER_node *node, ETHER_vec2_u8 pos)
     }
     
     ETHER_leaf *leaf;
-    ETHER_leaf_create(&leaf, curr);
+    ETHER_leaf_create(&leaf, curr, quadtree);
     return leaf;
 }
 
@@ -460,6 +493,20 @@ ETHER_array *ETHER_node_get_rect_leaves(ETHER_node *node, ETHER_rect_u8 rect)
 
     _ETHER_node_get_rect_leaves(node, rect, array);
     return array;
+}
+
+void ETHER_array_create(ETHER_array **array)
+{
+    (*array) = malloc(sizeof(ETHER_array));
+    (*array)->len = 0;
+    (*array)->space = 0;
+    (*array)->data = NULL;
+}
+
+void ETHER_array_destroy(ETHER_array *array)
+{
+    free(array->data);
+    free(array);
 }
 
 void ETHER_array_debug(ETHER_array *array)
