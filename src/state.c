@@ -464,7 +464,7 @@ void _ETHER_node_get_rect_leaves(ETHER_node *node, ETHER_rect_u8 rect, ETHER_arr
     if (node == NULL)
         return;
 
-    if (ETHER_rect_overlap_rect_u8(rect, node->rect))
+    if (ETHER_rects_collide_u8(rect, node->rect))
     {
         if (node->is_leaf)
         {

@@ -15,8 +15,12 @@ typedef uint8_t BOOL;
 #define CEIL_POS(X) ((X-(int)(X)) > 0 ? (int)(X+1) : (int)(X))
 #define CEIL_NEG(X) (int)(X)
 #define CEIL(X) (((X) > 0) ? CEIL_POS(X) : CEIL_NEG(X))
+#define ROUND(X) (((X) < (int)(X) + 0.5) ? (int)(X) : (int)(X) + 1)
+#define FLOOR(X) ((int)(X))
+#define NUFFIN(X) (X)
 #define ABS(X) (((X) < 0) ? -(X) : (X))
 #define SIGN(X) (((X) < 0) ? -1 : 1)
+#define SIGN2(X) (((X) == 0) ? 0 : (((X) < 0) ? -1 : 1))
 #define CLAMP(X, MIN, MAX) ((((X) < (MIN)) ? (MIN) : (X)) > (MAX) ? (MAX) : (X))
 
 typedef struct _ETHER_vec2_u8 ETHER_vec2_u8;
@@ -63,8 +67,10 @@ void ETHER_rect_u8_debug_inline(ETHER_rect_u8 rect);
 void ETHER_rect_u16_debug_inline(ETHER_rect_u16 rect);
 BOOL ETHER_vec2_in_rect_u8(ETHER_vec2_u8 pos, ETHER_rect_u8 rect);
 BOOL ETHER_vec2_in_rect_u16(ETHER_vec2_u16 pos, ETHER_rect_u16 rect);
-BOOL ETHER_rect_overlap_rect_u8(ETHER_rect_u8 a, ETHER_rect_u8 b);
-BOOL ETHER_rect_overlap_rect_u16(ETHER_rect_u16 a, ETHER_rect_u16 b);
+BOOL ETHER_rects_collide_u8(ETHER_rect_u8 a, ETHER_rect_u8 b);
+BOOL ETHER_rects_collide_u16(ETHER_rect_u16 a, ETHER_rect_u16 b);
+BOOL ETHER_rects_collide_u8_2(ETHER_rect_u8 a, ETHER_rect_u8 b);
+BOOL ETHER_rects_collide_u16_2(ETHER_rect_u16 a, ETHER_rect_u16 b);
 SDL_FRect ETHER_rect_u16_to_sdl(ETHER_rect_u16 rect);
 
 struct _ETHER_vec2_float

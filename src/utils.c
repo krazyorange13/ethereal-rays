@@ -56,7 +56,7 @@ BOOL ETHER_vec2_in_rect_u16(ETHER_vec2_u16 pos, ETHER_rect_u16 rect)
         && pos.y >= rect.y && pos.y <= rect.y + rect.h;
 }
 
-BOOL ETHER_rect_overlap_rect_u8(ETHER_rect_u8 a, ETHER_rect_u8 b)
+BOOL ETHER_rects_collide_u8(ETHER_rect_u8 a, ETHER_rect_u8 b)
 {
     return a.x <= b.x + b.w
         && b.x <= a.x + a.w
@@ -64,12 +64,28 @@ BOOL ETHER_rect_overlap_rect_u8(ETHER_rect_u8 a, ETHER_rect_u8 b)
         && b.y <= a.y + a.h;
 }
 
-BOOL ETHER_rect_overlap_rect_u16(ETHER_rect_u16 a, ETHER_rect_u16 b)
+BOOL ETHER_rects_collide_u16(ETHER_rect_u16 a, ETHER_rect_u16 b)
 {
     return a.x <= b.x + b.w
         && b.x <= a.x + a.w
         && a.y <= b.y + b.h
         && b.y <= a.y + a.h;
+}
+
+BOOL ETHER_rects_collide_u8_2(ETHER_rect_u8 a, ETHER_rect_u8 b)
+{
+    return a.x < b.x + b.w
+        && b.x < a.x + a.w
+        && a.y < b.y + b.h
+        && b.y < a.y + a.h;
+}
+
+BOOL ETHER_rects_collide_u16_2(ETHER_rect_u16 a, ETHER_rect_u16 b)
+{
+    return a.x < b.x + b.w
+        && b.x < a.x + a.w
+        && a.y < b.y + b.h
+        && b.y < a.y + a.h;
 }
 
 SDL_FRect ETHER_rect_u16_to_sdl(ETHER_rect_u16 rect)

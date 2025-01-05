@@ -42,7 +42,7 @@ int main()
 
     ETHER_state_entities state_entities = {};
 
-    #define ENTITY_COUNT 1000
+    #define ENTITY_COUNT 500
 
     srand(time(NULL));
     ETHER_entity *entities = malloc(sizeof(ETHER_entity) * ENTITY_COUNT);
@@ -56,7 +56,6 @@ int main()
         ETHER_buckets_add(&state_quadtree, entity);
         ETHER_entities_add(&state_entities, entity);
     }
-
 
     ETHER_state state;
     state.fps = 0;

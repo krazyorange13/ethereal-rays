@@ -7,13 +7,6 @@
 
 #include "SDL3/SDL.h"
 
-typedef struct _ETHER_renderer ETHER_renderer;
-
-struct _ETHER_renderer
-{
-
-};
-
 void ETHER_render(ETHER_state *state);
 
 #endif

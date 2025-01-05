@@ -54,10 +54,12 @@ void ETHER_handle_entities(ETHER_state *state)
     {
         ETHER_rect_u16 entity_rect_old = entity->rect;
 
-        entity->rect.x += (rand() % 3) - 1;
-        entity->rect.y += (rand() % 3) - 1;
-        entity->rect.x %= RENDER_WIDTH;
-        entity->rect.y %= RENDER_HEIGHT;
+        // entity->rect.x += (rand() % 5) - 2;
+        // entity->rect.y += (rand() % 5) - 2;
+        entity->rect.x += SIGN2(state->mouse.x - entity->rect.x);
+        entity->rect.y += SIGN2(state->mouse.y - entity->rect.y);
+        entity->rect.x %= RENDER_WIDTH - ENTITY_SIZE;
+        entity->rect.y %= RENDER_HEIGHT - ENTITY_SIZE;
         
         ETHER_handle_entity_collisions(entity);
         ETHER_handle_entity_buckets(state->quadtree, entity, entity_rect_old);
@@ -105,8 +107,12 @@ void ETHER_handle_entity_buckets(ETHER_state_quadtree *quadtree, ETHER_entity *e
     ETHER_array_destroy(leaves_new);
 }
 
+#define COLLISION_CONSTANT 2
+
 void ETHER_handle_entity_collisions(ETHER_entity *entity)
 {
+    int16_t force_x = 0;
+    int16_t force_y = 0;
     for (ETHER_bucket_node *node = entity->bucket_head; node != NULL; node = node->next)
     {
         ETHER_bucket *bucket = node->curr;
@@ -115,41 +121,17 @@ void ETHER_handle_entity_collisions(ETHER_entity *entity)
             if (entity == other->curr) continue;
             ETHER_rect_u16 *entity_rect = &entity->rect;
             ETHER_rect_u16 *other_rect = &other->curr->rect;
-            if (!ETHER_rect_overlap_rect_u16(*entity_rect, *other_rect)) continue;
+            if (!ETHER_rects_collide_u16_2(*entity_rect, *other_rect)) continue;
             int16_t delta_x = other_rect->x - entity_rect->x;
             int16_t delta_y = other_rect->y - entity_rect->y;
-            int16_t move_x = ((ABS(delta_x))) * 0.125 * SIGN(delta_x);
-            int16_t move_y = ((ABS(delta_y))) * 0.125 * SIGN(delta_y);
-            entity_rect->x -= move_x;
-            entity_rect->y -= move_y;
-            break;
+            uint16_t abs_delta_x = ABS(delta_x);
+            uint16_t abs_delta_y = ABS(delta_y);
+            if (abs_delta_x > abs_delta_y / COLLISION_CONSTANT) force_x -= CEIL((float) (ENTITY_SIZE - abs_delta_x) / 2) * SIGN(delta_x);
+            if (abs_delta_y > abs_delta_x / COLLISION_CONSTANT) force_y -= CEIL((float) (ENTITY_SIZE - abs_delta_y) / 2) * SIGN(delta_y);
         }
     }
-}
-
-void ETHER_handle_entities_collisions(ETHER_state_quadtree *quadtree)
-{
-    for (ETHER_leaf *leaf = quadtree->leaves_head; leaf != NULL; leaf = leaf->next)
-    {
-        for (ETHER_entity_node *entity_node = leaf->bucket.entity_head; entity_node != NULL; entity_node = entity_node->next)
-        {
-            for (ETHER_entity_node *other_node = leaf->bucket.entity_head; other_node != NULL; other_node = other_node->next)
-            {
-                if (entity_node == other_node) continue;
-                ETHER_rect_u16 *entity_rect = &entity_node->curr->rect;
-                ETHER_rect_u16 *other_rect = &other_node->curr->rect;
-                if (!ETHER_rect_overlap_rect_u16(*entity_rect, *other_rect)) continue;
-                int16_t delta_x = other_rect->x - entity_rect->x;
-                int16_t delta_y = other_rect->y - entity_rect->y;
-                int16_t move_x = ((ENTITY_SIZE / 2) - ABS(delta_x)) * SIGN(delta_x);
-                int16_t move_y = ((ENTITY_SIZE / 2) - ABS(delta_y)) * SIGN(delta_y);
-                entity_rect->x -= move_x;
-                entity_rect->y -= move_y;
-                other_rect->x += move_x;
-                other_rect->y += move_y;
-            }
-        }
-    }
+    entity->rect.x += force_x;
+    entity->rect.y += force_y;
 }
 
 void ETHER_entities_debug(ETHER_state_entities *entities, ETHER_entity *marker0, ETHER_entity *marker1, ETHER_entity *marker2)

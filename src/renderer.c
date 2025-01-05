@@ -33,9 +33,10 @@ void ETHER_render(ETHER_state *state)
     for (ETHER_entity *entity = state->entities->head; entity != NULL; entity = entity->next)
     {
         SDL_FRect frect = ETHER_rect_u16_to_sdl(entity->rect);
-        SDL_SetRenderDrawColor(state->sdl_renderer, 255, 0, 0, 255);
-        SDL_RenderRect(state->sdl_renderer, &frect);
-        SDL_RenderTexture(state->sdl_renderer, entity->tex, NULL, &frect);
+        SDL_SetRenderDrawColor(state->sdl_renderer, 255, 0, 0, 100);
+        SDL_SetRenderDrawBlendMode(state->sdl_renderer, SDL_BLENDMODE_BLEND);
+        SDL_RenderFillRect(state->sdl_renderer, &frect);
+        // SDL_RenderTexture(state->sdl_renderer, entity->tex, NULL, &frect);
     }
 
     // SDL_SetRenderDrawColor(state->sdl_renderer, 0, 0, 255, 100);
@@ -76,14 +77,6 @@ void ETHER_render_leaf(SDL_Renderer *renderer, ETHER_state_textures *textures, E
 
     SDL_FRect frect = ETHER_rect_u16_to_sdl(leaf->rect_world);
     SDL_RenderTexture(renderer, leaf->chunk.cache, NULL, &frect);
-
-    SDL_SetRenderDrawColor(renderer, 255, 0, 255, 255);
-    SDL_RenderRect(renderer, &frect);
-
-    char *ptr_str = malloc(12);
-    snprintf(ptr_str, 12, "%p", &leaf->bucket);
-    SDL_RenderDebugText(renderer, leaf->rect_world.x + 32, leaf->rect_world.y + 32, ptr_str);
-    free(ptr_str);
 }
 
 #define DEBUG_INPUT_BINDING(bind, row) \
@@ -137,10 +130,7 @@ void ETHER_render_debug(SDL_Renderer *renderer, ETHER_state *state)
     // DEBUG_INPUT_BINDING(move_down, 2)
     // DEBUG_INPUT_BINDING(move_left, 3)
     // DEBUG_INPUT_BINDING(move_right, 4)
-
-    // ETHER_render_node_debug(renderer, state->quadtree->base, state->mouse.x / 16);
-    // ETHER_render_node_debug(renderer, state->quadtree->base, CHUNK_WORLD_SIZE);
-
+    
     char *__fps = malloc(6);
     snprintf(__fps, 6, "%3.3lf", state->fps);
     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
