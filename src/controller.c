@@ -54,10 +54,23 @@ void ETHER_handle_entities(ETHER_state *state)
     {
         ETHER_rect_u16 entity_rect_old = entity->rect;
 
-        // entity->rect.x += (rand() % 5) - 2;
-        // entity->rect.y += (rand() % 5) - 2;
-        entity->rect.x += SIGN2(state->mouse.x - entity->rect.x);
-        entity->rect.y += SIGN2(state->mouse.y - entity->rect.y);
+        if (entity != state->player)
+        {
+            // entity->rect.x += (rand() % 5) - 2;
+            // entity->rect.y += (rand() % 5) - 2;
+            // entity->rect.x += SIGN2(state->mouse.x - entity->rect.x);
+            // entity->rect.y += SIGN2(state->mouse.y - entity->rect.y);
+            entity->rect.x += SIGN2(RENDER_WIDTH / 2 - entity->rect.x);
+            entity->rect.y += SIGN2(RENDER_HEIGHT / 2 - entity->rect.y);
+        }
+        else
+        {
+            if (state->input->move_up) state->player->rect.y -= 5;
+            if (state->input->move_down) state->player->rect.y += 5;
+            if (state->input->move_left) state->player->rect.x -= 5;
+            if (state->input->move_right) state->player->rect.x += 5;
+        }
+
         entity->rect.x %= RENDER_WIDTH - ENTITY_SIZE;
         entity->rect.y %= RENDER_HEIGHT - ENTITY_SIZE;
         
@@ -107,7 +120,7 @@ void ETHER_handle_entity_buckets(ETHER_state_quadtree *quadtree, ETHER_entity *e
     ETHER_array_destroy(leaves_new);
 }
 
-#define COLLISION_CONSTANT 2
+#define COLLISION_CONSTANT 1
 
 void ETHER_handle_entity_collisions(ETHER_entity *entity)
 {

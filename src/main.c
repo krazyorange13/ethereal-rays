@@ -68,6 +68,7 @@ int main()
     state.textures = &state_textures;
     state.entities = &state_entities;
     state.quadtree = &state_quadtree;
+    state.player = state_entities.head;
 
     uint64_t frequency = SDL_GetPerformanceFrequency();
     uint64_t frame_timer = 0;

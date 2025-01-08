@@ -33,7 +33,7 @@ void ETHER_render(ETHER_state *state)
     for (ETHER_entity *entity = state->entities->head; entity != NULL; entity = entity->next)
     {
         SDL_FRect frect = ETHER_rect_u16_to_sdl(entity->rect);
-        SDL_SetRenderDrawColor(state->sdl_renderer, 255, 0, 0, 100);
+        SDL_SetRenderDrawColor(state->sdl_renderer, (entity == state->player) ? 0 : 255, 0, (entity == state->player) ? 255 : 0, 100);
         SDL_SetRenderDrawBlendMode(state->sdl_renderer, SDL_BLENDMODE_BLEND);
         SDL_RenderFillRect(state->sdl_renderer, &frect);
         // SDL_RenderTexture(state->sdl_renderer, entity->tex, NULL, &frect);

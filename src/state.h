@@ -29,6 +29,7 @@ struct _ETHER_state
     ETHER_state_textures *textures;
     ETHER_state_entities *entities;
     ETHER_state_quadtree *quadtree;
+    ETHER_entity *player;
 };
 
 struct _ETHER_state_input
