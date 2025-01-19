@@ -1,4 +1,6 @@
-#include "utils.h"
+// #include "utils.h"
+
+/*
 
 BOOL ETHER_rect_u8_iszero(ETHER_rect_u8 rect)
 {
@@ -92,3 +94,5 @@ SDL_FRect ETHER_rect_u16_to_sdl(ETHER_rect_u16 rect)
 {
     return (SDL_FRect) { rect.x, rect.y, rect.w, rect.h };
 }
+
+*/

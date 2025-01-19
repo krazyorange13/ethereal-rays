@@ -8,11 +8,9 @@
 typedef struct _ETHER_state ETHER_state;
 typedef struct _ETHER_state_input ETHER_state_input;
 typedef struct _ETHER_state_keybinds ETHER_state_keybinds;
-typedef struct _ETHER_state_entities ETHER_state_entities;
 typedef struct _ETHER_state_textures ETHER_state_textures;
-typedef struct _ETHER_state_quadtree ETHER_state_quadtree;
-
-typedef struct _ETHER_entity ETHER_entity;
+typedef struct _ETHER_state_entities ETHER_state_entities;
+typedef struct _ETHER_block_chunks ETHER_state_chunks;
 
 ETHER_state_keybinds create_default_state_keybinds();
 
@@ -28,8 +26,9 @@ struct _ETHER_state
     ETHER_state_keybinds *keybinds;
     ETHER_state_textures *textures;
     ETHER_state_entities *entities;
-    ETHER_state_quadtree *quadtree;
-    ETHER_entity *player;
+    ETHER_state_chunks *chunks;
+
+    uint16_t player;
 };
 
 struct _ETHER_state_input
@@ -47,22 +46,6 @@ struct _ETHER_state_keybinds
     SDL_Scancode move_right;
     SDL_Scancode move_left;
 };
-
-struct _ETHER_state_entities
-{
-    uint16_t count;
-    ETHER_entity *head;
-    ETHER_entity *tail;
-};
-
-void ETHER_entity_create(ETHER_entity **entity);
-void ETHER_entity_create_prealloc(ETHER_entity **entity);
-void ETHER_move_entity(ETHER_entity *curr, ETHER_entity *dest_prev);
-void ETHER_swap_entities(ETHER_entity *prev, ETHER_entity *next);
-void ETHER_swap_entities_adjacent(ETHER_entity *prev, ETHER_entity *next);
-void ETHER_swap_entities_nonadjacent(ETHER_entity *prev, ETHER_entity *next);
-void ETHER_entities_add(ETHER_state_entities *entities, ETHER_entity *entity);
-ETHER_entity *ETHER_entities_pop(ETHER_state_entities *entities);
 
 struct _ETHER_state_textures
 {
@@ -89,130 +72,123 @@ struct _ETHER_state_textures
     SDL_Texture *undef;
 };
 
-typedef uint8_t block_id_t;
+typedef uint8_t ETHER_block_tex_id_t;
 
 void ETHER_state_textures_load(SDL_Renderer *renderer, ETHER_state_textures *textures);
-SDL_Texture *ETHER_blockid_to_texture(ETHER_state_textures *textures, block_id_t id);
+SDL_Texture *ETHER_blockid_to_texture(ETHER_state_textures *textures, ETHER_block_tex_id_t id);
 
-#define BLOCK_SIZE 16
-#define ENTITY_SIZE 16
-#define CHUNK_SIZE 8
-#define CHUNK_WORLD_SIZE (BLOCK_SIZE * CHUNK_SIZE)
-#define QUADTREE_SIZE 255
-#define QUADTREE_DEPTH 8
-#define WORLD_SIZE (QUADTREE_SIZE * CHUNK_WORLD_SIZE)
+/*
+ * TABLES
+ */
 
-typedef uint8_t chunk_coord_t;
-typedef uint8_t quadtree_coord_t;
-typedef uint16_t world_coord_t;
-typedef struct _ETHER_chunk ETHER_chunk;
-typedef union _ETHER_branch ETHER_branch;
-typedef struct _ETHER_node ETHER_node;
-typedef struct _ETHER_leaf ETHER_leaf;
-typedef struct _ETHER_entity_node ETHER_entity_node;
-typedef struct _ETHER_bucket_node ETHER_bucket_node;
-typedef struct _ETHER_bucket ETHER_bucket;
-typedef struct _ETHER_array ETHER_array;
+#define ETHER_TABLE_MAX UINT16_MAX
+typedef uint16_t ETHER_table_id_t;
 
-struct _ETHER_state_quadtree
+/* ENTITIES */
+
+#define ETHER_STATE_ENTITIES_MAX ETHER_TABLE_MAX
+#define ETHER_ENTITY_SIZE 16
+
+typedef ETHER_table_id_t ETHER_entity_id_t;
+typedef ETHER_rect_u16 ETHER_rect_world_space;
+
+typedef struct _ETHER_state_entities ETHER_state_entities;
+
+struct _ETHER_state_entities
 {
-    ETHER_node *base;
-    ETHER_leaf *leaves_head;
-    ETHER_leaf *leaves_tail;
+    // spatial structure
+    struct _ETHER_entity_chunks *chunks;
+
+    ETHER_entity_id_t len;
+    ETHER_entity_id_t cap;
+
+    ETHER_rect_world_space *rects;
 };
 
-struct _ETHER_chunk
+/* BLOCKS */
+
+#define ETHER_STATE_CHUNKS_MAX ETHER_TABLE_MAX
+typedef uint16_t ETHER_chunk_id_t;
+
+typedef struct _ETHER_block_chunks ETHER_state_chunks;
+
+/*
+ * SPACIAL STRUCTURES
+ */
+
+/* ENTITIES */
+
+#define _world_units
+
+#define ETHER_ENTITY_CHUNK_CELL_SIZE 32 // entity_chunk_cell size in pixels
+#define ETHER_ENTITY_CHUNK_SIZE_CELLS 8 // entity_chunk size in cells (ONE SIDE)
+#define ETHER_ENTITY_CHUNK_SIZE_WORLD (ETHER_ENTITY_CHUNK_SIZE_CELLS * ETHER_ENTITY_CHUNK_CELL_SIZE) // entity_chunk size in pixels
+#define ETHER_ENTITY_CHUNK_CELL_CAP 10
+
+typedef ETHER_rect_u8 ETHER_rect_entity_chunk_space;
+typedef uint16_t ETHER_entity_chunk_id_t;
+typedef uint16_t ETHER_entity_chunk_cell_id_t;
+
+typedef struct _ETHER_entity_chunks ETHER_entity_chunks;
+typedef struct _ETHER_entity_chunk ETHER_entity_chunk;
+typedef struct _ETHER_entity_chunk_cell ETHER_entity_chunk_cell;
+
+struct _ETHER_entity_chunks
 {
-    block_id_t blocks[CHUNK_SIZE * CHUNK_SIZE];
-    SDL_Texture *cache;
-    BOOL update_cache;
+    ETHER_entity_chunk_id_t len;
+    ETHER_entity_chunk_id_t cap;
+
+    ETHER_rect_entity_chunk_space *rects;
+    ETHER_entity_chunk *chunks;
 };
 
-union _ETHER_branch
+
+struct _ETHER_entity_chunk_cell
 {
-    ETHER_node **quad;
-    ETHER_leaf *leaf;
+    uint8_t len; // technically, to be consistent, this should have some crazy typedef but i dont want to do that
+    ETHER_entity_id_t entities[ETHER_ENTITY_CHUNK_CELL_CAP];
 };
 
-struct _ETHER_node
+struct _ETHER_entity_chunk
 {
-    ETHER_node *parent;
-    uint8_t ppos;
-    uint8_t depth;
-    ETHER_rect_u8 rect;
-    ETHER_branch branch;
-    BOOL is_leaf;
+    // ETHER_entity_id_t entities[SQUARE(ETHER_ENTITY_CHUNK_SIZE_CELLS) * ETHER_ENTITY_CHUNK_CELL_CAP];
+    ETHER_entity_chunk_cell cells[SQUARE(ETHER_ENTITY_CHUNK_SIZE_CELLS)];
 };
 
-struct _ETHER_entity_node
+/* BLOCKS */
+
+#define ETHER_BLOCK_CHUNK_SIZE 8
+#define ETHER_BLOCK_SIZE 16
+#define ETHER_BLOCK_CHUNK_WORLD_SIZE (ETHER_BLOCK_CHUNK_SIZE * ETHER_BLOCK_SIZE)
+
+#define FLAG_DIRTY TRUE
+#define FLAG_CLEAN FALSE
+
+typedef ETHER_rect_u8 ETHER_rect_block_chunk_space;
+
+typedef struct _ETHER_block_chunks ETHER_block_chunks;
+typedef struct _ETHER_block_chunk ETHER_block_chunk;
+typedef struct _ETHER_block ETHER_block;
+
+struct _ETHER_block_chunks
 {
-    struct _ETHER_entity_node *prev;
-    struct _ETHER_entity_node *next;
-    ETHER_entity *curr;
+    ETHER_chunk_id_t len;
+    ETHER_chunk_id_t cap;
+
+    ETHER_rect_block_chunk_space *rects;
+    ETHER_block_chunk *chunks;
+    BOOL *render_cache_flags;
+    SDL_Texture **render_caches;
 };
 
-struct _ETHER_bucket_node
+struct _ETHER_block
 {
-    struct _ETHER_bucket_node *prev;
-    struct _ETHER_bucket_node *next;
-    ETHER_bucket *curr;
+    ETHER_block_tex_id_t tex;
 };
 
-struct _ETHER_entity
+struct _ETHER_block_chunk
 {
-    ETHER_rect_u16 rect;
-    SDL_Texture *tex;
-    struct _ETHER_entity *next;
-    struct _ETHER_entity *prev;
-    ETHER_bucket_node *bucket_head;
-    ETHER_bucket_node *bucket_tail;
-};
-
-struct _ETHER_bucket
-{
-    ETHER_leaf *parent;
-    ETHER_entity_node *entity_head;
-    ETHER_entity_node *entity_tail;
-};
-
-struct _ETHER_leaf
-{
-    ETHER_node *parent;
-    ETHER_rect_u8 rect_quadtree;
-    ETHER_rect_u16 rect_world;
-    ETHER_chunk chunk;
-    ETHER_bucket bucket;
-    struct _ETHER_leaf *next;
-    struct _ETHER_leaf *prev;
-};
-
-void ETHER_buckets_add(ETHER_state_quadtree *quadtree, ETHER_entity *entity);
-void ETHER_bucket_add(ETHER_bucket *bucket, ETHER_entity *entity);
-void ETHER_bucket_remove(ETHER_bucket *bucket, ETHER_entity *entity);
-
-void ETHER_leaf_create(ETHER_leaf **leaf, ETHER_node *parent, ETHER_state_quadtree *quadtree);
-void ETHER_node_create(ETHER_node **node, ETHER_node *parent, uint8_t ppos);
-void ETHER_node_subdivide(ETHER_node *node);
-ETHER_leaf *ETHER_node_create_leaf(ETHER_node *node, ETHER_vec2_u8 pos, ETHER_state_quadtree *quadtree);
-BOOL ETHER_node_isend(ETHER_node *node);
-uint8_t ETHER_node_get_quadrant(ETHER_node *node, ETHER_vec2_u8 pos);
-uint8_t ETHER_node_get_depth(ETHER_node *node);
-uint8_t ETHER_node_get_ppos(ETHER_node *node);
-ETHER_rect_u8 ETHER_node_get_rect(ETHER_node *node);
-ETHER_rect_u16 ETHER_rect_quadtree_to_world(ETHER_rect_u8 rect);
-ETHER_rect_u8 ETHER_rect_world_to_quadtree(ETHER_rect_u16 rect);
-ETHER_rect_u8 ETHER_rect_world_to_quadtree_2(ETHER_rect_u16 rect);
-void ETHER_node_debug(ETHER_node *node);
-ETHER_array *ETHER_node_get_rect_leaves(ETHER_node *node, ETHER_rect_u8 rect);
-void ETHER_array_debug(ETHER_array *array);
-void ETHER_array_create(ETHER_array **array);
-void ETHER_array_destroy(ETHER_array *array);
-
-struct _ETHER_array
-{
-    void **data;
-    uint16_t len;
-    size_t space;
+    ETHER_block blocks[SQUARE(ETHER_BLOCK_CHUNK_SIZE)];
 };
 
 #endif

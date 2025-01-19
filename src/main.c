@@ -23,38 +23,64 @@ int main()
     ETHER_state_textures state_textures = {};
     ETHER_state_textures_load(sdl_renderer, &state_textures);
 
-    ETHER_state_quadtree state_quadtree;
-    ETHER_node_create(&state_quadtree.base, NULL, 0);
-    state_quadtree.leaves_head = NULL;
-    state_quadtree.leaves_tail = NULL;
+    ETHER_state_chunks state_chunks;
+    state_chunks.len = 24;
+    state_chunks.cap = 24;
+    state_chunks.rects = malloc(state_chunks.cap * sizeof(*state_chunks.rects));
+    state_chunks.chunks = malloc(state_chunks.cap * sizeof(*state_chunks.chunks));
+    state_chunks.render_cache_flags = malloc(state_chunks.cap * sizeof(*state_chunks.render_cache_flags));
+    state_chunks.render_caches = malloc(state_chunks.cap * sizeof(*state_chunks.render_caches));
 
-    for (uint8_t x = 0; x < QUADTREE_SIZE; x++)
+    for (ETHER_chunk_id_t i = 0; i < state_chunks.len; i++)
     {
-        for (uint8_t y = 0; y < QUADTREE_SIZE; y++)
+        ETHER_rect_block_chunk_space rect;
+        rect.x = i % 6;
+        rect.y = i / 6;
+        rect.w = 1;
+        rect.h = 1;
+        state_chunks.rects[i] = rect;
+        state_chunks.render_cache_flags[i] = FLAG_DIRTY;
+        state_chunks.render_caches[i] = NULL;
+
+        ETHER_block_chunk chunk;
+        for (uint16_t i = 0; i < SQUARE(ETHER_BLOCK_CHUNK_SIZE); i++)
         {
-            ETHER_leaf *leaf = ETHER_node_create_leaf(state_quadtree.base, (ETHER_vec2_u8) {x, y}, &state_quadtree);
-            for (uint8_t i = 0; i < CHUNK_SIZE * CHUNK_SIZE; i++)
-            {
-                leaf->chunk.blocks[i] = 1;//(x + y * QUADTREE_SIZE) % 20;
-            }
+            chunk.blocks[i].tex = 1;
         }
+        state_chunks.chunks[i] = chunk;
     }
 
-    ETHER_state_entities state_entities = {};
-
-    #define ENTITY_COUNT 500
+    ETHER_state_entities state_entities;
+    state_entities.len = 1000;
+    state_entities.cap = 1000;
+    state_entities.rects = malloc(state_entities.cap * sizeof(*state_entities.rects));
 
     srand(time(NULL));
-    ETHER_entity *entities = malloc(sizeof(ETHER_entity) * ENTITY_COUNT);
-    memset(entities, 0, sizeof(ETHER_entity) * ENTITY_COUNT);
-    for (int i = 0; i < ENTITY_COUNT; i++)
+    for (ETHER_entity_id_t i = 0; i < state_entities.len; i++)
     {
-        ETHER_entity *entity = entities + i;
-        ETHER_entity_create_prealloc(&entity);
-        entity->tex = state_textures.item;
-        entity->rect = (ETHER_rect_u16) { rand() % RENDER_WIDTH, rand() % RENDER_HEIGHT, ENTITY_SIZE, ENTITY_SIZE };
-        ETHER_buckets_add(&state_quadtree, entity);
-        ETHER_entities_add(&state_entities, entity);
+        ETHER_rect_world_space rect;
+        rect.x = rand() % RENDER_WIDTH;
+        rect.y = rand() % RENDER_HEIGHT;
+        rect.w = ETHER_ENTITY_SIZE;
+        rect.h = ETHER_ENTITY_SIZE;
+        state_entities.rects[i] = rect;
+    }
+
+    state_entities.chunks = malloc(sizeof(*state_entities.chunks));
+    state_entities.chunks->len = 6;
+    state_entities.chunks->cap = 6;
+    state_entities.chunks->rects = malloc(sizeof(*state_entities.chunks->rects) * state_entities.chunks->cap);
+    state_entities.chunks->chunks = malloc(sizeof(*state_entities.chunks->chunks) * state_entities.chunks->cap);
+    memset(state_entities.chunks->chunks, 0, sizeof(*state_entities.chunks->chunks) * state_entities.chunks->cap);
+    
+    for (ETHER_entity_chunk_id_t i = 0; i < state_entities.chunks->len; i++)
+    {
+        ETHER_rect_entity_chunk_space rect;
+        rect.x = i % 3;
+        rect.y = i / 3;
+        rect.w = 1;
+        rect.h = 1;
+        state_entities.chunks->rects[i] = rect;
     }
 
     ETHER_state state;
@@ -67,8 +93,8 @@ int main()
     state.keybinds = &state_keybinds;
     state.textures = &state_textures;
     state.entities = &state_entities;
-    state.quadtree = &state_quadtree;
-    state.player = state_entities.head;
+    state.chunks = &state_chunks;
+    state.player = 0;
 
     uint64_t frequency = SDL_GetPerformanceFrequency();
     uint64_t frame_timer = 0;
@@ -81,7 +107,7 @@ int main()
     {
         this_time = SDL_GetPerformanceCounter();
         delta_time = ((double) this_time - (double) prev_time) / frequency * 1000.0;
-    
+
         if (this_time > frame_timer + frequency)
         {
             frame_timer = this_time;
@@ -95,9 +121,6 @@ int main()
         prev_time = this_time;
         dt4 = dt3; dt3 = dt2; dt2 = dt1; dt1 = delta_time;
     }
-
-    // TODO causes crash right now
-    // ETHER_state_entities_free(&state_entities);
 
     SDL_DestroyRenderer(sdl_renderer);
     SDL_DestroyWindow(sdl_window);

@@ -4,15 +4,23 @@
 
 void ETHER_update(ETHER_state *state)
 {
+    ETHER_handle_events(state);
+    ETHER_handle_mouse(state);
+    ETHER_handle_entities(state);
+}
+
+void ETHER_handle_mouse(ETHER_state *state)
+{
+    SDL_GetMouseState(&state->mouse.x, &state->mouse.y);
+}
+
+void ETHER_handle_events(ETHER_state *state)
+{
     SDL_Event event;
     while (SDL_PollEvent(&event))
     {
         ETHER_handle_event(&event, state);
     }
-    
-    SDL_GetMouseState(&state->mouse.x, &state->mouse.y);
-
-    ETHER_handle_entities(state);
 }
 
 #define HANDLE_BOUND_INPUT(bind) \
@@ -29,7 +37,7 @@ void ETHER_handle_event(SDL_Event *event, ETHER_state *state)
     {
         if (event->key.scancode == SDL_SCANCODE_Q)
             state->quit = TRUE;
-        
+
         if (event->key.scancode == SDL_SCANCODE_SPACE)
             state->update_textures = TRUE;
 
@@ -49,168 +57,173 @@ void ETHER_handle_event(SDL_Event *event, ETHER_state *state)
 
 void ETHER_handle_entities(ETHER_state *state)
 {
-    ETHER_entities_depth_sort(state->entities);
-    for (ETHER_entity *entity = state->entities->head; entity != NULL; entity = entity->next)
-    {
-        ETHER_rect_u16 entity_rect_old = entity->rect;
-
-        if (entity != state->player)
-        {
-            // entity->rect.x += (rand() % 5) - 2;
-            // entity->rect.y += (rand() % 5) - 2;
-            // entity->rect.x += SIGN2(state->mouse.x - entity->rect.x);
-            // entity->rect.y += SIGN2(state->mouse.y - entity->rect.y);
-            entity->rect.x += SIGN2(RENDER_WIDTH / 2 - entity->rect.x);
-            entity->rect.y += SIGN2(RENDER_HEIGHT / 2 - entity->rect.y);
-        }
-        else
-        {
-            if (state->input->move_up) state->player->rect.y -= 5;
-            if (state->input->move_down) state->player->rect.y += 5;
-            if (state->input->move_left) state->player->rect.x -= 5;
-            if (state->input->move_right) state->player->rect.x += 5;
-        }
-
-        entity->rect.x %= RENDER_WIDTH - ENTITY_SIZE;
-        entity->rect.y %= RENDER_HEIGHT - ENTITY_SIZE;
-        
-        ETHER_handle_entity_collisions(entity);
-        ETHER_handle_entity_buckets(state->quadtree, entity, entity_rect_old);
-    }
-
+    ETHER_handle_entities_movement(state);
+    ETHER_handle_entities_depth_sort(state);
+    ETHER_handle_entities_chunks(state);
+    ETHER_handle_entities_collisions(state);
 }
 
-void ETHER_handle_entity_buckets(ETHER_state_quadtree *quadtree, ETHER_entity *entity, ETHER_rect_u16 entity_rect_old)
+void ETHER_handle_entities_movement(ETHER_state *state)
 {
-
-    if (ETHER_rects_equal_u16(entity_rect_old, entity->rect))
-        return;
-    
-    ETHER_rect_u8 rect_qt_old = ETHER_rect_world_to_quadtree_2(entity_rect_old);
-    ETHER_rect_u8 rect_qt_new = ETHER_rect_world_to_quadtree_2(entity->rect);
-    ETHER_array *leaves_old = ETHER_node_get_rect_leaves(quadtree->base, rect_qt_old);
-    ETHER_array *leaves_new = ETHER_node_get_rect_leaves(quadtree->base, rect_qt_new);
-    for (uint8_t i = 0; i < leaves_new->len; i++)
+    for (ETHER_entity_id_t i = 0; i < state->entities->len; i++)
     {
-        for (uint8_t j = 0; j < leaves_old->len; j++)
+        // TODO: for entity movement to work properly it has to go
+        // hand in hand with entity collisions. Refactor collision function
+        // to suit this better.
+
+        // state->entities->rects[i].x += (rand() % 3) - 1;
+        // state->entities->rects[i].y += (rand() % 3) - 1;
+        // state->entities->rects[i].x += SIGN2(RENDER_WIDTH / 2 - state->entities->rects[i].x);
+        // state->entities->rects[i].y += SIGN2(RENDER_HEIGHT / 2 - state->entities->rects[i].y);
+    }
+}
+
+void ETHER_handle_entities_depth_sort(ETHER_state *state)
+{
+    ETHER_state_entities *entities = state->entities;
+
+    if (entities->len == 0 || entities->len == 1)
+        return;
+
+    for (ETHER_entity_id_t i = 1; i < entities->len; i++)
+    {
+        if (entities->rects[i].y >= entities->rects[i - 1].y)
+            continue;
+
+        ETHER_rect_world_space rect = entities->rects[i];
+        ETHER_entity_id_t j = i;
+
+        while(j != 0 && rect.y < entities->rects[j - 1].y)
         {
-            if (leaves_new->data[i] == leaves_old->data[j])
+            entities->rects[j] = entities->rects[j - 1];
+            j--;
+        }
+
+        entities->rects[j] = rect;
+    }
+}
+
+typedef struct
+{
+    uint8_t len;
+    uint8_t cap;
+    ETHER_entity_chunk_cell **cells;
+} ETHER_entity_chunk_cell_array;
+
+ETHER_entity_chunk_cell_array ETHER_get_entity_chunk_cells(ETHER_state *state, ETHER_entity_id_t entity)
+{
+    ETHER_entity_chunk_cell_array array;
+    array.len = 0;
+    array.cap = 4;
+    array.cells = malloc(sizeof(*array.cells) * array.cap);
+
+    ETHER_entity_id_t i = entity;
+
+    ETHER_rect_world_space rect = state->entities->rects[i];
+
+    uint16_t cell_x1 = rect.x / ETHER_ENTITY_CHUNK_CELL_SIZE;
+    uint16_t cell_y1 = rect.y / ETHER_ENTITY_CHUNK_CELL_SIZE;
+    uint16_t cell_x2 = (rect.x + rect.w) / ETHER_ENTITY_CHUNK_CELL_SIZE;
+    uint16_t cell_y2 = (rect.y + rect.h) / ETHER_ENTITY_CHUNK_CELL_SIZE;
+
+    for (ETHER_entity_chunk_id_t j = 0; j < state->entities->chunks->len; j++)
+    {
+        ETHER_rect_u8 chunk_rect = state->entities->chunks->rects[j];
+        ETHER_rect_u16 chunk_rect_as_world;
+        chunk_rect_as_world.x = chunk_rect.x * ETHER_ENTITY_CHUNK_SIZE_WORLD;
+        chunk_rect_as_world.y = chunk_rect.y * ETHER_ENTITY_CHUNK_SIZE_WORLD;
+        chunk_rect_as_world.w = chunk_rect.w * ETHER_ENTITY_CHUNK_SIZE_WORLD;
+        chunk_rect_as_world.h = chunk_rect.h * ETHER_ENTITY_CHUNK_SIZE_WORLD;
+
+        if (ETHER_rects_collide_u16_2(rect, chunk_rect_as_world))
+        {
+            int16_t _cell_x1 = cell_x1 - chunk_rect_as_world.x / ETHER_ENTITY_CHUNK_CELL_SIZE;
+            int16_t _cell_y1 = cell_y1 - chunk_rect_as_world.y / ETHER_ENTITY_CHUNK_CELL_SIZE;
+            int16_t _cell_x2 = cell_x2 - chunk_rect_as_world.x / ETHER_ENTITY_CHUNK_CELL_SIZE;
+            int16_t _cell_y2 = cell_y2 - chunk_rect_as_world.y / ETHER_ENTITY_CHUNK_CELL_SIZE;
+
+            _cell_x1 = (_cell_x1 < 0) ? 0 : _cell_x1;
+            _cell_y1 = (_cell_y1 < 0) ? 0 : _cell_y1;
+            _cell_x2 = (_cell_x2 >= ETHER_ENTITY_CHUNK_SIZE_CELLS) ? ETHER_ENTITY_CHUNK_SIZE_CELLS - 1 : _cell_x2;
+            _cell_y2 = (_cell_y2 >= ETHER_ENTITY_CHUNK_SIZE_CELLS) ? ETHER_ENTITY_CHUNK_SIZE_CELLS - 1 : _cell_y2;
+
+            for (int16_t x = _cell_x1; x <= _cell_x2; x++)
             {
-                leaves_new->data[i] = NULL;
-                leaves_old->data[j] = NULL;
+                for (int16_t y = _cell_y1; y <= _cell_y2; y++)
+                {
+                    uint16_t cell_i = x + y * ETHER_ENTITY_CHUNK_SIZE_CELLS;
+                    ETHER_entity_chunk_cell *cell = &state->entities->chunks->chunks[j].cells[cell_i];
+                    
+                    array.cells[array.len] = cell;
+                    array.len++;
+                }
             }
         }
     }
-    for (uint8_t i = 0; i < leaves_new->len; i++)
-    {
-        if (leaves_new->data[i] == NULL)
-            continue;
-        ETHER_leaf *leaf = leaves_new->data[i];
-        ETHER_bucket_add(&leaf->bucket, entity);
-    }
-    for (uint8_t j = 0; j < leaves_old->len; j++)
-    {
-        if (leaves_old->data[j] == NULL)
-            continue;
-        ETHER_leaf *leaf = leaves_old->data[j];
-        ETHER_bucket_remove(&leaf->bucket, entity);
-    }
 
-    ETHER_array_destroy(leaves_old);
-    ETHER_array_destroy(leaves_new);
+    return array;
+}
+
+void ETHER_handle_entities_chunks(ETHER_state *state)
+{
+    memset(state->entities->chunks->chunks, 0, sizeof(*state->entities->chunks->chunks) * state->entities->chunks->len);
+
+    for (ETHER_entity_id_t i = 0; i < state->entities->len; i++)
+    {
+        ETHER_entity_chunk_cell_array array = ETHER_get_entity_chunk_cells(state, i);
+        for (uint8_t j = 0; j < array.len; j++)
+        {
+            ETHER_entity_chunk_cell *cell = array.cells[j];
+            if (cell->len < ETHER_ENTITY_CHUNK_CELL_CAP)
+            {
+                cell->entities[cell->len] = i;
+                cell->len++;
+            }
+        }
+        free(array.cells);
+    }
 }
 
 #define COLLISION_CONSTANT 1
 
-void ETHER_handle_entity_collisions(ETHER_entity *entity)
+void ETHER_handle_entities_collisions(ETHER_state *state)
 {
-    int16_t force_x = 0;
-    int16_t force_y = 0;
-    for (ETHER_bucket_node *node = entity->bucket_head; node != NULL; node = node->next)
+    for (ETHER_entity_id_t i = 0; i < state->entities->len; i++)
     {
-        ETHER_bucket *bucket = node->curr;
-        for (ETHER_entity_node *other = bucket->entity_head; other != NULL; other = other->next)
+        int16_t force_x = 0;
+        int16_t force_y = 0;
+
+        // state->entities->rects[i].x += (rand() % 3) - 1;
+        // state->entities->rects[i].y += (rand() % 3) - 1;
+        state->entities->rects[i].x += SIGN2(RENDER_WIDTH / 2 - state->entities->rects[i].x);
+        state->entities->rects[i].y += SIGN2(RENDER_HEIGHT / 2 - state->entities->rects[i].y);
+
+        ETHER_entity_chunk_cell_array array = ETHER_get_entity_chunk_cells(state, i);
+
+        for (uint8_t j = 0; j < array.len; j++)
         {
-            if (entity == other->curr) continue;
-            ETHER_rect_u16 *entity_rect = &entity->rect;
-            ETHER_rect_u16 *other_rect = &other->curr->rect;
-            if (!ETHER_rects_collide_u16_2(*entity_rect, *other_rect)) continue;
-            int16_t delta_x = other_rect->x - entity_rect->x;
-            int16_t delta_y = other_rect->y - entity_rect->y;
-            uint16_t abs_delta_x = ABS(delta_x);
-            uint16_t abs_delta_y = ABS(delta_y);
-            if (abs_delta_x > abs_delta_y / COLLISION_CONSTANT) force_x -= CEIL((float) (ENTITY_SIZE - abs_delta_x) / 2) * SIGN(delta_x);
-            if (abs_delta_y > abs_delta_x / COLLISION_CONSTANT) force_y -= CEIL((float) (ENTITY_SIZE - abs_delta_y) / 2) * SIGN(delta_y);
-        }
-    }
-    entity->rect.x += force_x;
-    entity->rect.y += force_y;
-}
-
-void ETHER_entities_debug(ETHER_state_entities *entities, ETHER_entity *marker0, ETHER_entity *marker1, ETHER_entity *marker2)
-{
-    printf("\t");
-    for (ETHER_entity *entity = entities->head; entity != NULL; entity = entity->next)
-    {
-        if (entity == marker0) printf("\x1b[31m");
-        if (entity == marker1) printf("\x1b[32m");
-        if (entity == marker2) printf("\x1b[33m");
-        printf("%d\x1b[0m ", entity->rect.y);
-    }
-    printf("\n");
-}
-
-#define SORT_CHECK(left, right) (!left || (right->rect.y <= left->rect.y))
-
-void ETHER_entities_depth_sort(ETHER_state_entities *entities)
-{
-    if (!entities->head || !entities->head->next)
-        return;
-
-    ETHER_entity *head = entities->head->next;
-    ETHER_entity *prev = entities->head;
-
-    while (head)
-    {
-        if (SORT_CHECK(prev, head))
-        {
-            prev = prev->next;
-            head = prev->next;
-        }
-        else
-        {
-            ETHER_entity *temp = prev;
-            while (1)
+            ETHER_entity_chunk_cell *cell = array.cells[j];
+            for (uint8_t k = 0; k < cell->len; k++)
             {
-                if (SORT_CHECK(temp, head))
-                {
-                    if (entities->tail == head)
-                        entities->tail = head->prev;
-                    ETHER_move_entity(head, temp);
-                    head = prev->next;
-                    break;
-                }
-                else
-                {
-                    temp = temp->prev;
-                    if (temp == NULL)
-                    {
-                        ETHER_entity *dest_next = entities->head;
-                        ETHER_entity *curr_prev = head->prev;
-                        ETHER_entity *curr_next = head->next;
-                        head->prev = NULL;
-                        head->next = dest_next;
-                        dest_next->prev = head;
-                        entities->head = head;
-                        if (curr_prev) curr_prev->next = curr_next;
-                        if (curr_prev && entities->tail == head)
-                            entities->tail = curr_prev;
-                        if (curr_next) curr_next->prev = curr_prev;
-                        head = prev->next;
-                        break;
-                    }
-                }
+                ETHER_entity_id_t entity_this = i;
+                ETHER_entity_id_t entity_that = cell->entities[k];
+                if (entity_this == entity_that) continue;
+                ETHER_rect_world_space *entity_this_rect = &state->entities->rects[entity_this];
+                ETHER_rect_world_space *entity_that_rect = &state->entities->rects[entity_that];
+                if (!ETHER_rects_collide_u16(*entity_this_rect, *entity_that_rect)) continue;
+                int16_t delta_x = entity_that_rect->x - entity_this_rect->x;
+                int16_t delta_y = entity_that_rect->y - entity_this_rect->y;
+                int16_t abs_delta_x = ABS(delta_x);
+                int16_t abs_delta_y = ABS(delta_y);
+                // future TODO: using ETHER_ENTITY_SIZE here won't work for entities of different sizes
+                if (abs_delta_x > abs_delta_y / COLLISION_CONSTANT) force_x -= CEIL((float) (ETHER_ENTITY_SIZE - abs_delta_x) / 2) * SIGN2(delta_x);
+                if (abs_delta_y > abs_delta_x / COLLISION_CONSTANT) force_y -= CEIL((float) (ETHER_ENTITY_SIZE - abs_delta_y) / 2) * SIGN2(delta_y);
             }
         }
+
+        free(array.cells);
+
+        state->entities->rects[i].x += force_x;
+        state->entities->rects[i].y += force_y;
     }
 }

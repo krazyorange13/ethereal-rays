@@ -1,7 +1,7 @@
 WFLAGS = -Wall -Wextra -Wno-unused-command-line-argument -Wno-enum-conversion
 IFLAGS = -Isrc/ -Iinclude/
 LFLAGS = -Llib/ -lSDL3 -lSDL3_image
-MFLAGS = -O2
+MFLAGS = -O3
 FLAGS = $(IFLAGS) $(LFLAGS) $(WFLAGS) $(MFLAGS)
 
 CC = gcc-14
