@@ -7,6 +7,9 @@ void ETHER_update(ETHER_state *state)
     ETHER_handle_events(state);
     ETHER_handle_mouse(state);
     ETHER_handle_entities(state);
+
+    state->camera.y += (state->input->move_down - state->input->move_up) * 3;
+    state->camera.x += (state->input->move_right - state->input->move_left) * 3;
 }
 
 void ETHER_handle_mouse(ETHER_state *state)
@@ -16,6 +19,7 @@ void ETHER_handle_mouse(ETHER_state *state)
 
 void ETHER_handle_events(ETHER_state *state)
 {
+    state->smth = FALSE;
     SDL_Event event;
     while (SDL_PollEvent(&event))
     {
@@ -37,15 +41,16 @@ void ETHER_handle_event(SDL_Event *event, ETHER_state *state)
     {
         if (event->key.scancode == SDL_SCANCODE_Q)
             state->quit = TRUE;
-
+        
         if (event->key.scancode == SDL_SCANCODE_SPACE)
-            state->update_textures = TRUE;
+            state->smth = TRUE;
 
         SDL_Scancode code = event->key.scancode;
         HANDLE_BOUND_INPUT(move_up)
         HANDLE_BOUND_INPUT(move_down)
         HANDLE_BOUND_INPUT(move_right)
         HANDLE_BOUND_INPUT(move_left)
+        HANDLE_BOUND_INPUT(smth);
     }
     else if (event->type == SDL_EVENT_WINDOW_RESIZED)
     {
@@ -57,24 +62,42 @@ void ETHER_handle_event(SDL_Event *event, ETHER_state *state)
 
 void ETHER_handle_entities(ETHER_state *state)
 {
-    ETHER_handle_entities_movement(state);
     ETHER_handle_entities_depth_sort(state);
+    ETHER_handle_entities_behavior(state);
     ETHER_handle_entities_chunks(state);
     ETHER_handle_entities_collisions(state);
+    ETHER_handle_entities_behavior_2(state);
 }
 
-void ETHER_handle_entities_movement(ETHER_state *state)
+void ETHER_handle_entities_behavior(ETHER_state *state)
 {
+    if (state->input->smth)
+    {
+        memset(state->entities->velocities, 0, sizeof(*state->entities->velocities) * state->entities->len);
+        // printf("%lld\n", state->frames);
+        return;
+    }
     for (ETHER_entity_id_t i = 0; i < state->entities->len; i++)
     {
-        // TODO: for entity movement to work properly it has to go
-        // hand in hand with entity collisions. Refactor collision function
-        // to suit this better.
-
-        // state->entities->rects[i].x += (rand() % 3) - 1;
-        // state->entities->rects[i].y += (rand() % 3) - 1;
-        // state->entities->rects[i].x += SIGN2(RENDER_WIDTH / 2 - state->entities->rects[i].x);
-        // state->entities->rects[i].y += SIGN2(RENDER_HEIGHT / 2 - state->entities->rects[i].y);
+        // state->entities->velocities[i].x = (rand() % 11) - 5;
+        // state->entities->velocities[i].y = (rand() % 11) - 5;
+        // if (rand() % 2)
+        // {
+        // if (!state->input->smth)
+        // {
+            // state->entities->velocities[i].x = SIGN((state->camera.x + state->camera.w / 2) - state->entities->rects[i].x) * 2;
+            state->entities->velocities[i].y = SIGN((state->camera.y + state->camera.h / 2) - state->entities->rects[i].y) * 5;
+        // }
+        // }
+        // else
+        // {
+            state->entities->velocities[i].x = SIGN((state->camera.x + state->camera.w / 2) - state->entities->rects[i].x) * 5;
+            
+            // state->entities->velocities[i].x = 0;
+            // state->entities->velocities[i].y = 0;
+            // state->entities->velocities[i].x = SIGN(state->camera.x + state->camera.w / 2 - state->entities->rects[i].x);
+            // state->entities->velocities[i].y = SIGN(state->camera.y + state->camera.h / 2 - state->entities->rects[i].y);
+        // }
     }
 }
 
@@ -184,46 +207,78 @@ void ETHER_handle_entities_chunks(ETHER_state *state)
     }
 }
 
-#define COLLISION_CONSTANT 1
-
 void ETHER_handle_entities_collisions(ETHER_state *state)
 {
     for (ETHER_entity_id_t i = 0; i < state->entities->len; i++)
     {
-        int16_t force_x = 0;
-        int16_t force_y = 0;
-
-        // state->entities->rects[i].x += (rand() % 3) - 1;
-        // state->entities->rects[i].y += (rand() % 3) - 1;
-        state->entities->rects[i].x += SIGN2(RENDER_WIDTH / 2 - state->entities->rects[i].x);
-        state->entities->rects[i].y += SIGN2(RENDER_HEIGHT / 2 - state->entities->rects[i].y);
-
         ETHER_entity_chunk_cell_array array = ETHER_get_entity_chunk_cells(state, i);
-
         for (uint8_t j = 0; j < array.len; j++)
         {
             ETHER_entity_chunk_cell *cell = array.cells[j];
             for (uint8_t k = 0; k < cell->len; k++)
             {
-                ETHER_entity_id_t entity_this = i;
-                ETHER_entity_id_t entity_that = cell->entities[k];
-                if (entity_this == entity_that) continue;
-                ETHER_rect_world_space *entity_this_rect = &state->entities->rects[entity_this];
-                ETHER_rect_world_space *entity_that_rect = &state->entities->rects[entity_that];
-                if (!ETHER_rects_collide_u16(*entity_this_rect, *entity_that_rect)) continue;
-                int16_t delta_x = entity_that_rect->x - entity_this_rect->x;
-                int16_t delta_y = entity_that_rect->y - entity_this_rect->y;
-                int16_t abs_delta_x = ABS(delta_x);
-                int16_t abs_delta_y = ABS(delta_y);
-                // future TODO: using ETHER_ENTITY_SIZE here won't work for entities of different sizes
-                if (abs_delta_x > abs_delta_y / COLLISION_CONSTANT) force_x -= CEIL((float) (ETHER_ENTITY_SIZE - abs_delta_x) / 2) * SIGN2(delta_x);
-                if (abs_delta_y > abs_delta_x / COLLISION_CONSTANT) force_y -= CEIL((float) (ETHER_ENTITY_SIZE - abs_delta_y) / 2) * SIGN2(delta_y);
+                ETHER_entity_id_t l = cell->entities[k];
+                if (i == l) continue;
+                ETHER_handle_entities_collision(state, i, l);
             }
         }
+    }
+}
 
-        free(array.cells);
+void ETHER_handle_entities_collision(ETHER_state *state, ETHER_entity_id_t curr, ETHER_entity_id_t othr)
+{
+    ETHER_rect_world_space *curr_rect = &state->entities->rects[curr];
+    ETHER_rect_world_space *othr_rect = &state->entities->rects[othr];
+    ETHER_rect_s16 *curr_vel = &state->entities->velocities[curr];
+    ETHER_rect_s16 *othr_vel = &state->entities->velocities[othr];
+    ETHER_rect_world_space curr_rect_pre = *curr_rect;
+    curr_rect_pre.x += curr_vel->x;
+    curr_rect_pre.y += curr_vel->y;
+    ETHER_rect_world_space othr_rect_pre = *othr_rect;
+    othr_rect_pre.x += othr_vel->x;
+    othr_rect_pre.y += othr_vel->y;
 
-        state->entities->rects[i].x += force_x;
-        state->entities->rects[i].y += force_y;
+    if (!ETHER_rects_collide_u16(curr_rect_pre, *othr_rect)) return;
+
+    int16_t delta_x_pre = othr_rect->x - curr_rect_pre.x;
+    int16_t delta_y_pre = othr_rect->y - curr_rect_pre.y;
+    int16_t overlap_x_pre = ETHER_ENTITY_SIZE - ABS(delta_x_pre);
+    int16_t overlap_y_pre = ETHER_ENTITY_SIZE - ABS(delta_y_pre);
+
+    if (overlap_x_pre > 0 && overlap_x_pre <= overlap_y_pre) curr_vel->x -= overlap_x_pre * SIGN2(delta_x_pre);
+    {
+        // int16_t sep = FLOOR((float) overlap_x_pre * SIGN2(delta_x_pre) / 2);
+        // curr_vel->x -= sep;
+        // othr_vel->x += sep;
+    }
+    if (overlap_y_pre > 0 && overlap_y_pre <= overlap_x_pre) curr_vel->y -= overlap_y_pre * SIGN2(delta_y_pre);
+    {
+        // int16_t sep = FLOOR((float) overlap_y_pre * SIGN2(delta_y_pre) / 2);
+        // curr_vel->y -= sep;
+        // othr_vel->y += sep;
+    }
+    int16_t delta_x = othr_rect->x - curr_rect->x;
+    int16_t delta_y = othr_rect->y - curr_rect->y;
+    if (delta_x == 0 && delta_y == 0)
+    {
+        // state->quit = TRUE;
+        // curr_vel->x = ((rand() % 3) - 1) * 1;
+        // curr_vel->y = ((rand() % 3) - 1) * 1;
+    }
+}
+
+void ETHER_handle_entities_behavior_2(ETHER_state *state)
+{
+    for (ETHER_entity_id_t i = 0; i < state->entities->len; i++)
+    {
+        state->entities->rects[i].x += state->entities->velocities[i].x;
+        state->entities->rects[i].y += state->entities->velocities[i].y;
+        if (state->entities->velocities[i].x || state->entities->velocities[i].y)
+            state->entities->states[i].behavior = ETHER_ENTITY_BEHAVIOR_PERSON_WALK;
+        else state->entities->states[i].behavior = ETHER_ENTITY_BEHAVIOR_PERSON_IDLE;
+        if (state->entities->velocities[i].x > 0)
+            state->entities->states[i].direction = ETHER_ENTITY_DIRECTION_RIGHT;
+        else if (state->entities->velocities[i].x < 0)
+            state->entities->states[i].direction = ETHER_ENTITY_DIRECTION_LEFT;
     }
 }

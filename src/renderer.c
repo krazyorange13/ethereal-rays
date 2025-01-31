@@ -35,20 +35,21 @@ void ETHER_render_chunks(ETHER_state *state)
             SDL_SetRenderTarget(state->sdl_renderer, render_caches[i]);
             for (uint16_t j = 0; j < SQUARE(ETHER_BLOCK_CHUNK_SIZE); j++)
             {
-                SDL_Texture *tex = ETHER_blockid_to_texture(state->textures, chunks->chunks[i].blocks[j].tex);
-                SDL_FRect frect;
-                frect.x = (j % ETHER_BLOCK_CHUNK_SIZE) * ETHER_BLOCK_SIZE;
-                frect.y = (j / ETHER_BLOCK_CHUNK_SIZE) * ETHER_BLOCK_SIZE;
-                frect.w = ETHER_BLOCK_SIZE;
-                frect.h = ETHER_BLOCK_SIZE;
-                SDL_RenderTexture(state->sdl_renderer, tex, NULL, &frect);
+                ETHER_rect_texture tex = ETHER_texture_get_block(chunks->chunks[i].blocks[j].tex);
+                SDL_FRect frect_src = ETHER_rect_texture_to_sdl(tex);
+                SDL_FRect frect_dst;
+                frect_dst.x = (j % ETHER_BLOCK_CHUNK_SIZE) * ETHER_BLOCK_SIZE;
+                frect_dst.y = (j / ETHER_BLOCK_CHUNK_SIZE) * ETHER_BLOCK_SIZE;
+                frect_dst.w = ETHER_BLOCK_SIZE;
+                frect_dst.h = ETHER_BLOCK_SIZE;
+                SDL_RenderTexture(state->sdl_renderer, state->textures->block, &frect_src, &frect_dst);
             }
             SDL_SetRenderTarget(state->sdl_renderer, NULL);
         }
         ETHER_rect_block_chunk_space rect = chunks->rects[i];
         SDL_FRect frect;
-        frect.x = rect.x * ETHER_BLOCK_CHUNK_WORLD_SIZE;
-        frect.y = rect.y * ETHER_BLOCK_CHUNK_WORLD_SIZE;
+        frect.x = rect.x * ETHER_BLOCK_CHUNK_WORLD_SIZE - state->camera.x;
+        frect.y = rect.y * ETHER_BLOCK_CHUNK_WORLD_SIZE - state->camera.y;
         frect.w = ETHER_BLOCK_CHUNK_WORLD_SIZE;
         frect.h = ETHER_BLOCK_CHUNK_WORLD_SIZE;
         SDL_RenderTexture(state->sdl_renderer, chunks->render_caches[i], NULL, &frect);
@@ -61,11 +62,37 @@ void ETHER_render_entities(ETHER_state *state)
 {
     for (ETHER_entity_id_t i = 0; i < state->entities->len; i++)
     {
-        SDL_FRect frect = ETHER_rect_u16_to_sdl(state->entities->rects[i]);
-        // SDL_SetRenderDrawColor(state->sdl_renderer, 255, 0, 0, 100);
-        // SDL_SetRenderDrawBlendMode(state->sdl_renderer, SDL_BLENDMODE_BLEND);
-        // SDL_RenderFillRect(state->sdl_renderer, &frect);
-        SDL_RenderTexture(state->sdl_renderer, state->textures->item, NULL, &frect);
+        ETHER_animation anim = {};
+        switch (state->entities->states[i].behavior)
+        {
+            case ETHER_ENTITY_BEHAVIOR_NULL: break;
+            case ETHER_ENTITY_BEHAVIOR_PERSON_IDLE:
+                anim = state->animations->person_idle; break;
+            case ETHER_ENTITY_BEHAVIOR_PERSON_WALK:
+                anim = state->animations->person_walk; break;
+            default: break;
+        }
+        ETHER_texture_entity_t tex_id = anim.index + state->frames / anim.speed % anim.frames;
+        
+        SDL_FlipMode flip = SDL_FLIP_NONE;
+        switch (state->entities->states[i].direction)
+        {
+            case ETHER_ENTITY_DIRECTION_LEFT:
+                flip = SDL_FLIP_HORIZONTAL; break;
+            case ETHER_ENTITY_DIRECTION_RIGHT:
+                flip = SDL_FLIP_NONE; break;
+        }
+
+        SDL_FRect frect_src = ETHER_rect_texture_to_sdl(ETHER_texture_get_entity(tex_id));
+        SDL_FRect frect_dst = ETHER_rect_u16_to_sdl(state->entities->rects[i]);
+        frect_dst.x -= state->camera.x;
+        frect_dst.y -= state->camera.y - ETHER_ENTITY_SIZE + ETHER_TEXTURE_ENTITY_HEIGHT;
+        frect_dst.w = ETHER_ENTITY_SIZE;
+        frect_dst.h = ETHER_ENTITY_SIZE;
+        SDL_SetRenderDrawColor(state->sdl_renderer, 255, 0, 0, 100);
+        SDL_SetRenderDrawBlendMode(state->sdl_renderer, SDL_BLENDMODE_BLEND);
+        SDL_RenderFillRect(state->sdl_renderer, &frect_dst);
+        // SDL_RenderTextureRotated(state->sdl_renderer, state->textures->entity, &frect_src, &frect_dst, 0, NULL, flip);
     }
 }
 
@@ -81,20 +108,45 @@ void ETHER_render_entities(ETHER_state *state)
 
 void ETHER_render_debug(ETHER_state *state)
 {
-    SDL_Renderer *renderer = state->sdl_renderer;
+    // SDL_SetRenderDrawColor(renderer, 50, 50, 50, 255);
+    // DEBUG_INPUT_BINDING(move_up, 1)
+    // DEBUG_INPUT_BINDING(move_down, 2)
+    // DEBUG_INPUT_BINDING(move_left, 3)
+    // DEBUG_INPUT_BINDING(move_right, 4)
 
+    // ETHER_render_debug_entity_chunks(state);
+    ETHER_render_debug_fps(state);
+}
+
+void ETHER_render_debug_fps(ETHER_state *state)
+{
+    char __fps[6];
+    snprintf(__fps, 6, "%3.3lf", state->fps);
+    SDL_SetRenderDrawColor(state->sdl_renderer, 255, 255, 255, 255);
+    SDL_RenderDebugText(state->sdl_renderer, 9, 9, __fps);
+    SDL_RenderDebugText(state->sdl_renderer, 9, 10, __fps);
+    SDL_RenderDebugText(state->sdl_renderer, 9, 11, __fps);
+    SDL_RenderDebugText(state->sdl_renderer, 11, 11, __fps);
+    SDL_RenderDebugText(state->sdl_renderer, 11, 10, __fps);
+    SDL_RenderDebugText(state->sdl_renderer, 11, 9, __fps);
+    SDL_SetRenderDrawColor(state->sdl_renderer, 50, 50, 50, 255);
+    SDL_RenderDebugText(state->sdl_renderer, 10, 10, __fps);
+}
+
+void ETHER_render_debug_entity_chunks(ETHER_state *state)
+{
     for (ETHER_entity_chunk_id_t i = 0; i < state->entities->chunks->len; i++)
     {
         ETHER_rect_entity_chunk_space erect = state->entities->chunks->rects[i];
         SDL_FRect frect;
-        frect.x = erect.x * ETHER_ENTITY_CHUNK_SIZE_WORLD;
-        frect.y = erect.y * ETHER_ENTITY_CHUNK_SIZE_WORLD;
+        frect.x = erect.x * ETHER_ENTITY_CHUNK_SIZE_WORLD - state->camera.x;
+        frect.y = erect.y * ETHER_ENTITY_CHUNK_SIZE_WORLD - state->camera.y;
         frect.w = erect.w * ETHER_ENTITY_CHUNK_SIZE_WORLD;
         frect.h = erect.h * ETHER_ENTITY_CHUNK_SIZE_WORLD;
 
-        SDL_SetRenderDrawColor(renderer, 255, 0, 255, 100);
-        SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
-        SDL_RenderRect(renderer, &frect);
+        SDL_SetRenderDrawColor(state->sdl_renderer, 255, 0, 0, 100);
+        SDL_SetRenderDrawBlendMode(state->sdl_renderer, SDL_BLENDMODE_BLEND);
+        SDL_RenderRect(state->sdl_renderer, &frect);
 
         for (ETHER_entity_chunk_cell_id_t j = 0; j < SQUARE(ETHER_ENTITY_CHUNK_SIZE_CELLS); j++)
         {
@@ -104,35 +156,16 @@ void ETHER_render_debug(ETHER_state *state)
             _frect.w = ETHER_ENTITY_CHUNK_CELL_SIZE;
             _frect.h = ETHER_ENTITY_CHUNK_CELL_SIZE;
 
-            SDL_SetRenderDrawColor(renderer, 255, 0, 255, 100);
+            SDL_SetRenderDrawColor(state->sdl_renderer, 0, 0, 255, 100);
             // SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
-            SDL_RenderRect(renderer, &_frect);
+            SDL_RenderRect(state->sdl_renderer, &_frect);
 
             uint16_t _x = _frect.x + _frect.w / 2;
             uint16_t _y = _frect.y + _frect.h / 2;
             char _str[4];
             snprintf(_str, 4, "%u", state->entities->chunks->chunks[i].cells[j].len);
-            SDL_SetRenderDrawColor(renderer, 255, 0, 255, 200);
-            SDL_RenderDebugText(renderer, _x, _y, _str);
+            SDL_SetRenderDrawColor(state->sdl_renderer, 0, 0, 255, 200);
+            SDL_RenderDebugText(state->sdl_renderer, _x, _y, _str);
         }
     }
-
-
-    // SDL_SetRenderDrawColor(renderer, 50, 50, 50, 255);
-    // DEBUG_INPUT_BINDING(move_up, 1)
-    // DEBUG_INPUT_BINDING(move_down, 2)
-    // DEBUG_INPUT_BINDING(move_left, 3)
-    // DEBUG_INPUT_BINDING(move_right, 4)
-
-    char __fps[6];
-    snprintf(__fps, 6, "%3.3lf", state->fps);
-    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-    SDL_RenderDebugText(renderer, 9, 9, __fps);
-    SDL_RenderDebugText(renderer, 9, 10, __fps);
-    SDL_RenderDebugText(renderer, 9, 11, __fps);
-    SDL_RenderDebugText(renderer, 11, 11, __fps);
-    SDL_RenderDebugText(renderer, 11, 10, __fps);
-    SDL_RenderDebugText(renderer, 11, 9, __fps);
-    SDL_SetRenderDrawColor(renderer, 50, 50, 50, 255);
-    SDL_RenderDebugText(renderer, 10, 10, __fps);
 }

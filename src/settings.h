@@ -27,6 +27,9 @@ enum STATE_DEFAULT_KEYBINDS
     BIND(MOVE_DOWN, S)
     BIND(MOVE_LEFT, A)
     BIND(MOVE_RIGHT, D)
+    BIND(SMTH, SPACE)
 };
+
+// TODO: just fix the fucking collisions
 
 #endif

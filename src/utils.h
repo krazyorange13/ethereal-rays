@@ -28,6 +28,7 @@ typedef struct _ETHER_vec2_u8 ETHER_vec2_u8;
 typedef struct _ETHER_vec2_u16 ETHER_vec2_u16;
 typedef struct _ETHER_rect_u8 ETHER_rect_u8;
 typedef struct _ETHER_rect_u16 ETHER_rect_u16;
+typedef struct _ETHER_rect_s16 ETHER_rect_s16;
 typedef struct _ETHER_vec2_float ETHER_vec2_float;
 typedef struct _ETHER_col ETHER_col;
 
@@ -57,6 +58,14 @@ struct _ETHER_rect_u16
     uint16_t y;
     uint16_t w;
     uint16_t h;
+};
+
+struct _ETHER_rect_s16
+{
+    int16_t x;
+    int16_t y;
+    int16_t w;
+    int16_t h;
 };
 
 // BOOL ETHER_rect_u8_iszero(ETHER_rect_u8 rect);
