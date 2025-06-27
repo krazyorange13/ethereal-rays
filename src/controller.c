@@ -86,12 +86,12 @@ void ETHER_handle_entities_behavior(ETHER_state *state)
         // if (!state->input->smth)
         // {
             // state->entities->velocities[i].x = SIGN((state->camera.x + state->camera.w / 2) - state->entities->rects[i].x) * 2;
-            state->entities->velocities[i].y = SIGN((state->camera.y + state->camera.h / 2) - state->entities->rects[i].y) * 5;
+            state->entities->velocities[i].y = SIGN((state->camera.y + state->camera.h / 2) - state->entities->rects[i].y) * 1;
         // }
         // }
         // else
         // {
-            state->entities->velocities[i].x = SIGN((state->camera.x + state->camera.w / 2) - state->entities->rects[i].x) * 5;
+            state->entities->velocities[i].x = SIGN((state->camera.x + state->camera.w / 2) - state->entities->rects[i].x) * 1;
             
             // state->entities->velocities[i].x = 0;
             // state->entities->velocities[i].y = 0;

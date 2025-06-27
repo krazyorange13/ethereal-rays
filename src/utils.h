@@ -22,6 +22,8 @@ typedef uint8_t BOOL;
 #define SIGN(X) (((X) < 0) ? -1 : 1)
 #define SIGN2(X) (((X) == 0) ? 0 : (((X) < 0) ? -1 : 1))
 #define CLAMP(X, MIN, MAX) ((((X) < (MIN)) ? (MIN) : (X)) > (MAX) ? (MAX) : (X))
+#define MIN(X, Y) (((X) < (Y)) ? (X) : (Y))
+#define MAX(X, Y) (((X) > (Y)) ? (X) : (Y))
 #define SQUARE(X) ((X) * (X))
 
 typedef struct _ETHER_vec2_u8 ETHER_vec2_u8;

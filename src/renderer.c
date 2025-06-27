@@ -88,11 +88,11 @@ void ETHER_render_entities(ETHER_state *state)
         frect_dst.x -= state->camera.x;
         frect_dst.y -= state->camera.y - ETHER_ENTITY_SIZE + ETHER_TEXTURE_ENTITY_HEIGHT;
         frect_dst.w = ETHER_ENTITY_SIZE;
-        frect_dst.h = ETHER_ENTITY_SIZE;
-        SDL_SetRenderDrawColor(state->sdl_renderer, 255, 0, 0, 100);
-        SDL_SetRenderDrawBlendMode(state->sdl_renderer, SDL_BLENDMODE_BLEND);
-        SDL_RenderFillRect(state->sdl_renderer, &frect_dst);
-        // SDL_RenderTextureRotated(state->sdl_renderer, state->textures->entity, &frect_src, &frect_dst, 0, NULL, flip);
+        frect_dst.h = ETHER_ENTITY_SIZE * 2;
+        // SDL_SetRenderDrawColor(state->sdl_renderer, 255, 0, 0, 100);
+        // SDL_SetRenderDrawBlendMode(state->sdl_renderer, SDL_BLENDMODE_BLEND);
+        // SDL_RenderFillRect(state->sdl_renderer, &frect_dst);
+        SDL_RenderTextureRotated(state->sdl_renderer, state->textures->entity, &frect_src, &frect_dst, 0, NULL, flip);
     }
 }
 
