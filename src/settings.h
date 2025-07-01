@@ -6,10 +6,10 @@
 #include "SDL3/SDL.h"
 
 #define WINDOW_TITLE "etheral-rays (ETHER)"
-#define WINDOW_WIDTH 720
-#define WINDOW_HEIGHT 480
+#define WINDOW_WIDTH 1080
+#define WINDOW_HEIGHT 720
 
-#define RENDER_RATIO 1
+#define RENDER_RATIO 2
 
 #ifndef RENDER_RATIO
     #define RENDER_WIDTH 320

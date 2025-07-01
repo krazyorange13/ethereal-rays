@@ -21,8 +21,8 @@ int main()
     ETHER_state_keybinds state_keybinds = ETHER_keybinds_get_default();
 
     ETHER_state_chunks state_chunks;
-    state_chunks.len = 48;
-    state_chunks.cap = 48;
+    state_chunks.len = 1024;
+    state_chunks.cap = 1024;
     state_chunks.rects = malloc(state_chunks.cap * sizeof(*state_chunks.rects));
     state_chunks.chunks = malloc(state_chunks.cap * sizeof(*state_chunks.chunks));
     state_chunks.render_cache_flags = malloc(state_chunks.cap * sizeof(*state_chunks.render_cache_flags));
@@ -31,8 +31,8 @@ int main()
     for (ETHER_chunk_id_t i = 0; i < state_chunks.len; i++)
     {
         ETHER_rect_block_chunk_space rect;
-        rect.x = i % 8;
-        rect.y = i / 8;
+        rect.x = i % 32;
+        rect.y = i / 32;
         rect.w = 1;
         rect.h = 1;
         state_chunks.rects[i] = rect;
@@ -48,8 +48,8 @@ int main()
     }
 
     ETHER_state_entities state_entities;
-    state_entities.len = 600;
-    state_entities.cap = 600;
+    state_entities.len = 200;
+    state_entities.cap = 200;
     state_entities.rects = malloc(state_entities.cap * sizeof(*state_entities.rects));
     state_entities.velocities = malloc(state_entities.cap * sizeof(*state_entities.velocities));
     state_entities.types = malloc(state_entities.cap * sizeof(*state_entities.types));
@@ -65,8 +65,8 @@ int main()
     for (ETHER_entity_id_t i = 0; i < state_entities.len; i++)
     {
         ETHER_rect_world_space rect;
-        rect.x = rand() % (ETHER_ENTITY_CHUNK_SIZE_WORLD * 3);
-        rect.y = rand() % (ETHER_ENTITY_CHUNK_SIZE_WORLD * 2);
+        rect.x = (rand() % (ETHER_ENTITY_CHUNK_SIZE_WORLD * 1)) + ETHER_ENTITY_CHUNK_SIZE_WORLD;
+        rect.y = (rand() % (ETHER_ENTITY_CHUNK_SIZE_WORLD * 1)) + ETHER_ENTITY_CHUNK_SIZE_WORLD;
         rect.w = ETHER_ENTITY_SIZE;
         rect.h = ETHER_ENTITY_SIZE;
         state_entities.rects[i] = rect;
@@ -80,8 +80,8 @@ int main()
     }
 
     state_entities.chunks = malloc(sizeof(*state_entities.chunks));
-    state_entities.chunks->len = 12;
-    state_entities.chunks->cap = 12;
+    state_entities.chunks->len = 256;
+    state_entities.chunks->cap = 256;
     state_entities.chunks->rects = malloc(sizeof(*state_entities.chunks->rects) * state_entities.chunks->cap);
     state_entities.chunks->chunks = malloc(sizeof(*state_entities.chunks->chunks) * state_entities.chunks->cap);
     memset(state_entities.chunks->chunks, 0, sizeof(*state_entities.chunks->chunks) * state_entities.chunks->cap);
@@ -89,8 +89,8 @@ int main()
     for (ETHER_entity_chunk_id_t i = 0; i < state_entities.chunks->len; i++)
     {
         ETHER_rect_entity_chunk_space rect;
-        rect.x = i % 4;
-        rect.y = i / 4;
+        rect.x = i % 16;
+        rect.y = i / 16;
         rect.w = 1;
         rect.h = 1;
         state_entities.chunks->rects[i] = rect;
@@ -121,6 +121,8 @@ int main()
     state.animations = &state_animations;
     state.fps = 0;
     state.quit = FALSE;
+    state.smth = FALSE;
+    state.collision_cycle = 0;
     state.frames = 0;
     state.camera = (ETHER_rect_s16) {0, 0, RENDER_WIDTH, RENDER_HEIGHT};
 

@@ -29,6 +29,7 @@ struct _ETHER_state
     double fps;
     BOOL quit;
     BOOL smth;
+    uint16_t collision_cycle;
     uint64_t frames;
     ETHER_rect_s16 camera;
 };
@@ -156,7 +157,7 @@ typedef struct _ETHER_block_chunks ETHER_state_chunks;
 #define ETHER_ENTITY_CHUNK_CELL_SIZE 32 // entity_chunk_cell size in pixels
 #define ETHER_ENTITY_CHUNK_SIZE_CELLS 8 // entity_chunk size in cells (ONE SIDE)
 #define ETHER_ENTITY_CHUNK_SIZE_WORLD (ETHER_ENTITY_CHUNK_SIZE_CELLS * ETHER_ENTITY_CHUNK_CELL_SIZE) // entity_chunk size in pixels
-#define ETHER_ENTITY_CHUNK_CELL_CAP 10
+#define ETHER_ENTITY_CHUNK_CELL_CAP 16
 
 typedef ETHER_rect_u8 ETHER_rect_entity_chunk_space;
 typedef uint16_t ETHER_entity_chunk_id_t;
@@ -297,11 +298,11 @@ enum ETHER_texture_sheet_t
 #define ETHER_TEXTURE_SHEET_WIDTH_SPRITES  8
 #define ETHER_TEXTURE_SHEET_HEIGHT_SPRITES 16
 
-#define ETHER_TEXTURE_SHEET_PATH_BLOCK  "res/block.png"
-#define ETHER_TEXTURE_SHEET_PATH_ENTITY "res/entity.png"
-#define ETHER_TEXTURE_SHEET_PATH_ITEM   "res/item.png"
-#define ETHER_TEXTURE_SHEET_PATH_EFFECT "res/effect.png"
-#define ETHER_TEXTURE_SHEET_PATH_UI     "res/ui.png"
+#define ETHER_TEXTURE_SHEET_PATH_BLOCK  "/Users/teol/Documents/hac2/ethereal-rays/res/block.png"
+#define ETHER_TEXTURE_SHEET_PATH_ENTITY "/Users/teol/Documents/hac2/ethereal-rays/res/entity.png"
+#define ETHER_TEXTURE_SHEET_PATH_ITEM   "/Users/teol/Documents/hac2/ethereal-rays/res/item.png"
+#define ETHER_TEXTURE_SHEET_PATH_EFFECT "/Users/teol/Documents/hac2/ethereal-rays/res/effect.png"
+#define ETHER_TEXTURE_SHEET_PATH_UI     "/Users/teol/Documents/hac2/ethereal-rays/res/ui.png"
 
 typedef struct _ETHER_texture_sheets ETHER_texture_sheets;
 
