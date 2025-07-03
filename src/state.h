@@ -106,6 +106,7 @@ enum ETHER__packed__ ETHER_entity_type_t
 {
     ETHER_ENTITY_TYPE_NULL,
     ETHER_ENTITY_TYPE_PERSON,
+    ETHER_ENTITY_TYPE_PLAYER,
 };
 
 
@@ -157,7 +158,7 @@ typedef struct _ETHER_block_chunks ETHER_state_chunks;
 #define ETHER_ENTITY_CHUNK_CELL_SIZE 32 // entity_chunk_cell size in pixels
 #define ETHER_ENTITY_CHUNK_SIZE_CELLS 8 // entity_chunk size in cells (ONE SIDE)
 #define ETHER_ENTITY_CHUNK_SIZE_WORLD (ETHER_ENTITY_CHUNK_SIZE_CELLS * ETHER_ENTITY_CHUNK_CELL_SIZE) // entity_chunk size in pixels
-#define ETHER_ENTITY_CHUNK_CELL_CAP 16
+#define ETHER_ENTITY_CHUNK_CELL_CAP 64
 
 typedef ETHER_rect_u8 ETHER_rect_entity_chunk_space;
 typedef uint16_t ETHER_entity_chunk_id_t;

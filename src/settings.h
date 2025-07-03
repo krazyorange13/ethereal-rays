@@ -9,7 +9,7 @@
 #define WINDOW_WIDTH 1080
 #define WINDOW_HEIGHT 720
 
-#define RENDER_RATIO 2
+#define RENDER_RATIO 1
 
 #ifndef RENDER_RATIO
     #define RENDER_WIDTH 320

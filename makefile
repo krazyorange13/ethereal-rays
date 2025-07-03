@@ -4,7 +4,7 @@ LFLAGS = -Llib/ -lSDL3 -lSDL3_image
 MFLAGS = -O3
 FLAGS = $(IFLAGS) $(LFLAGS) $(WFLAGS) $(MFLAGS)
 
-CC = gcc-14
+CC = gcc-15
 CC_FLAGS = $(FLAGS)
 
 TARGET = out
