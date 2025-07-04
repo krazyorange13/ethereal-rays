@@ -29,7 +29,6 @@ struct _ETHER_state
     double fps;
     BOOL quit;
     BOOL smth;
-    uint16_t collision_cycle;
     uint64_t frames;
     ETHER_rect_s16 camera;
 };

@@ -8,17 +8,8 @@ void ETHER_update(ETHER_state *state)
     ETHER_handle_mouse(state);
     ETHER_handle_entities(state);
 
-    // state->camera.x += (state->input->move_right - state->input->move_left) * 8 / RENDER_RATIO;
-    // state->camera.y += (state->input->move_down - state->input->move_up) * 8 / RENDER_RATIO;
-
-    if (state->input->smth)
-    {
-        state->collision_cycle++;
-        if (state->collision_cycle >= state->entities->len)
-        {
-            state->collision_cycle = 0;
-        }
-    }
+    state->camera.x += (state->input->move_right - state->input->move_left) * 8 / RENDER_RATIO;
+    state->camera.y += (state->input->move_down - state->input->move_up) * 8 / RENDER_RATIO;
 }
 
 void ETHER_handle_mouse(ETHER_state *state)
@@ -117,19 +108,9 @@ void ETHER_handle_entities_depth_sort(ETHER_state *state)
 
 void ETHER_handle_entities_behavior(ETHER_state *state)
 {
-    // if (state->input->smth)
-    // {
-    //     memset(state->entities->velocities, 0, sizeof(*state->entities->velocities) * state->entities->len);
-    //     return;
-    // }
-    if (state->input->smth)
-        ETHER_handle_entity_behavior(state, state->collision_cycle);
-    else
+    for (ETHER_entity_id_t i = 0; i < state->entities->len; i++)
     {
-        for (ETHER_entity_id_t i = 0; i < state->entities->len; i++)
-        {
-            ETHER_handle_entity_behavior(state, i);
-        }
+        ETHER_handle_entity_behavior(state, i);
     }
 }
 
@@ -141,24 +122,13 @@ void ETHER_handle_entity_behavior(ETHER_state *state, ETHER_entity_id_t entity)
         state->entities->velocities[entity].y = (state->input->move_down - state->input->move_up) * 4;
         return;
     }
-    // state->entities->velocities[entity].x = SIGN((state->camera.x + state->camera.w / 2) - state->entities->rects[entity].x);
-    // state->entities->velocities[entity].y = SIGN((state->camera.y + state->camera.h / 2) - state->entities->rects[entity].y);
     
-    int target_x = /* state->camera.x + */ state->mouse.x / RENDER_RATIO;
-    int target_y = /* state->camera.y + */ state->mouse.y / RENDER_RATIO;
-    // if (ABS(target_x - state->entities->rects[entity].x) > 25)
-        state->entities->velocities[entity].x = SIGN2(target_x - state->entities->rects[entity].x);// * (rand() % 2);
-    // if (ABS(target_y - state->entities->rects[entity].y) > 25)
-        state->entities->velocities[entity].y = SIGN2(target_y - state->entities->rects[entity].y);// * (rand() % 2);
-
-
-    // state->entities->velocities[entity].x = SIGN(50 - state->entities->rects[entity].x);
-    // if (state->entities->rects[entity].x > 500)
-    //     state->entities->velocities[entity].x = -1;
-    // state->entities->velocities[entity].y = 0;
-    // if (state->entities->rects[entity].y > 500)
-    //     state->entities->velocities[entity].y = -1;
-    // state->entities->velocities[entity].x = 0;
+    int target_x = state->camera.x + state->mouse.x / RENDER_RATIO;
+    int target_y = state->camera.y + state->mouse.y / RENDER_RATIO;
+    // if (ABS(target_x - state->entities->rects[entity].x) > 100)
+        state->entities->velocities[entity].x = SIGN2(target_x - state->entities->rects[entity].x) * 4;// * (rand() % 2);
+    // if (ABS(target_y - state->entities->rects[entity].y) > 100)
+        state->entities->velocities[entity].y = SIGN2(target_y - state->entities->rects[entity].y) * 4;// * (rand() % 2);
 
 }
 
@@ -252,14 +222,9 @@ void ETHER_handle_entity_chunks(ETHER_state *state, ETHER_entity_id_t entity)
 
 void ETHER_handle_entities_collisions(ETHER_state *state)
 {
-    if (state->input->smth)
-        ETHER_handle_entity_collisions(state, state->collision_cycle);
-    else
+    for (ETHER_entity_id_t i = 0; i < state->entities->len; i++)
     {
-        for (ETHER_entity_id_t i = 0; i < state->entities->len; i++)
-        {
-            ETHER_handle_entity_collisions(state, i);
-        }
+        ETHER_handle_entity_collisions(state, i);
     }
 }
 
@@ -331,12 +296,6 @@ void ETHER_handle_entity_collisions(ETHER_state *state, ETHER_entity_id_t entity
         }
     }
 
-    // break early if no collisions
-    // if (coll_ents_len == 0)
-    //     return;
-
-    // printf("[%d]\t\t\t%d,%d;\n", entity, desired_rect.x, desired_rect.y);
-    
     for (int i = 0; i < coll_ents_len; i++)
     {
         ETHER_entity_id_t othr = coll_ents[i];
@@ -349,7 +308,7 @@ void ETHER_handle_entity_collisions(ETHER_state *state, ETHER_entity_id_t entity
         uint16_t abs_delta_x = ABS(curr_rect.x - othr_rect.x);
         uint16_t abs_delta_y = ABS(curr_rect.y - othr_rect.y);
 
-        #define OFFSET (1)
+        #define OFFSET (0)
         // int OFFSET = coll_ents_len / 2;
 
         if (abs_delta_x >= abs_delta_y)
@@ -386,6 +345,16 @@ void ETHER_handle_entity_collisions(ETHER_state *state, ETHER_entity_id_t entity
         cumulative_rect.y += corrected_rect.y;
     }
 
+    /* crowding compensation */
+
+    if (coll_ents_len > 6)
+    {
+        cumulative_rect.x -= state->entities->velocities[entity].x * 2;
+        cumulative_rect.y -= state->entities->velocities[entity].y * 2;
+    }
+
+    /* */
+
 #define DIVIDE_ROUND_DOWN(X, Y) ((X) / (Y))
 #define DIVIDE_ROUND_UP(X, Y) (((X) + (Y) - 1) / (Y))
 
@@ -403,26 +372,16 @@ void ETHER_handle_entity_collisions(ETHER_state *state, ETHER_entity_id_t entity
     if (y_div_up != curr_rect.y) average_rect.y = y_div_up;
     else average_rect.y = y_div_down;
 
-    // TODO: idea to reduce crowding:
-    //       reverse velocity when surrounded by threshold of entities
-    //       causes over concentration areas to stop squeezing together and back out
-    //       depends on coll_ent_len but needs to modify velocity (a problem)
-    //       save information in .w and .h?
+    // TODO: this player code is just testing
+    //       we'll want to implement a mass value that works similar to what
+    //       we're doing with multiple self values for the average calculation
+
+    // TODO: improve cache by bundling position and velocity
+    //       also saves half the space if we separate dimensions
+    //       and more cache stuff
 
     // int16_t delta_x = average_rect.x - curr_rect.x;
     // int16_t delta_y = average_rect.y - curr_rect.y;
-
-    // if (average_rect.x != desired_rect.x && average_rect.y != desired_rect.y)
-    //     return;
-
-    // if (!(average_rect.x == desired_rect.x && average_rect.y == desired_rect.y ))
-    // {
-    //     delta_x *= -1;
-    //     delta_y *= -1;
-    // }
-
-    // if (ABS(delta_x) > 1 || ABS(delta_y) > 1)
-        // printf("[%d]\t%d,%d;%d,%d;%d,%d;\n", entity, delta_x, delta_y, average_rect.x, average_rect.y, curr_rect.x, curr_rect.y);
 
     // state->entities->velocities[entity].x = delta_x;
     // state->entities->velocities[entity].y = delta_y;
