@@ -1,3 +1,4 @@
 build/
 res/*.aseprite
 .vscode/
+.DS_Store
