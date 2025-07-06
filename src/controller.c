@@ -126,9 +126,11 @@ void ETHER_handle_entity_behavior(ETHER_state *state, ETHER_entity_id_t entity)
     int target_x = state->camera.x + state->mouse.x / RENDER_RATIO;
     int target_y = state->camera.y + state->mouse.y / RENDER_RATIO;
     // if (ABS(target_x - state->entities->rects[entity].x) > 100)
-        state->entities->velocities[entity].x = SIGN2(target_x - state->entities->rects[entity].x) * 4;// * (rand() % 2);
+        state->entities->velocities[entity].x = SIGN2(target_x - state->entities->rects[entity].x) * 2;// * (rand() % 2);
     // if (ABS(target_y - state->entities->rects[entity].y) > 100)
-        state->entities->velocities[entity].y = SIGN2(target_y - state->entities->rects[entity].y) * 4;// * (rand() % 2);
+        state->entities->velocities[entity].y = SIGN2(target_y - state->entities->rects[entity].y) * 2;// * (rand() % 2);
+        // state->entities->velocities[entity].x = 4 * (rand() % 2) - 2;
+        // state->entities->velocities[entity].y = 4 * (rand() % 2) - 2;
 
 }
 
@@ -309,6 +311,7 @@ void ETHER_handle_entity_collisions(ETHER_state *state, ETHER_entity_id_t entity
         uint16_t abs_delta_y = ABS(curr_rect.y - othr_rect.y);
 
         #define OFFSET (0)
+
         // int OFFSET = coll_ents_len / 2;
 
         if (abs_delta_x >= abs_delta_y)

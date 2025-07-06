@@ -48,8 +48,8 @@ int main()
     }
 
     ETHER_state_entities state_entities;
-    state_entities.len = 10000;
-    state_entities.cap = 10000;
+    state_entities.len = 1000;
+    state_entities.cap = 1000;
     state_entities.rects = malloc(state_entities.cap * sizeof(*state_entities.rects));
     state_entities.velocities = malloc(state_entities.cap * sizeof(*state_entities.velocities));
     state_entities.types = malloc(state_entities.cap * sizeof(*state_entities.types));
@@ -65,8 +65,8 @@ int main()
     for (ETHER_entity_id_t i = 0; i < state_entities.len; i++)
     {
         ETHER_rect_world_space rect;
-        rect.x = (rand() % (ETHER_ENTITY_CHUNK_SIZE_WORLD * 14)) + ETHER_ENTITY_CHUNK_SIZE_WORLD;
-        rect.y = (rand() % (ETHER_ENTITY_CHUNK_SIZE_WORLD * 14)) + ETHER_ENTITY_CHUNK_SIZE_WORLD;
+        rect.x = (rand() % (ETHER_ENTITY_CHUNK_SIZE_WORLD * 4)) + ETHER_ENTITY_CHUNK_SIZE_WORLD;
+        rect.y = (rand() % (ETHER_ENTITY_CHUNK_SIZE_WORLD * 4)) + ETHER_ENTITY_CHUNK_SIZE_WORLD;
         rect.w = ETHER_ENTITY_SIZE;
         rect.h = ETHER_ENTITY_SIZE;
         state_entities.rects[i] = rect;
