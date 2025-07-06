@@ -1,0 +1,11 @@
++add @entity @collision mass
++fix @entity @collision clumping
++fix @entity @collision bucket caching
++add @entity more entities (texture, animation, behavior)
++add @entity attributes
++fix @entity sizes
++try larger @entity buckets
+
++add placeholder content (@block, @entity, @player)
++add stats (health, armor, mana, etc.)
++add file saving

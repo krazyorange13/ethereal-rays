@@ -144,6 +144,15 @@ void ETHER_render_debug_entity_chunks(ETHER_state *state)
         frect.w = erect.w * ETHER_ENTITY_CHUNK_SIZE_WORLD;
         frect.h = erect.h * ETHER_ENTITY_CHUNK_SIZE_WORLD;
 
+        ETHER_rect_s16 A = {erect.x * ETHER_ENTITY_CHUNK_SIZE_WORLD, erect.y * ETHER_ENTITY_CHUNK_SIZE_WORLD, erect.w * ETHER_ENTITY_CHUNK_SIZE_WORLD, erect.h * ETHER_ENTITY_CHUNK_SIZE_WORLD};
+        ETHER_rect_s16 B = state->camera;
+
+        if (!(A.x < B.x + B.w
+           && B.x < A.x + A.w
+           && A.y < B.y + B.h
+           && B.y < A.y + A.h))
+           continue;
+
         SDL_SetRenderDrawColor(state->sdl_renderer, 255, 0, 0, 100);
         SDL_SetRenderDrawBlendMode(state->sdl_renderer, SDL_BLENDMODE_BLEND);
         SDL_RenderRect(state->sdl_renderer, &frect);
