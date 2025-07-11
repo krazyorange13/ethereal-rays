@@ -1,11 +1,12 @@
-+add @entity @collision mass
-+fix @entity @collision clumping
+(A) +add @entity @collision mass
+(A) +fix @entity @collision clumping
 +fix @entity @collision bucket caching
 +add @entity more entities (texture, animation, behavior)
-+add @entity attributes
-+fix @entity sizes
+(B) +add @entity stats
+(A) +fix @entity sizes
 +try larger @entity buckets
 
-+add placeholder content (@block, @entity, @player)
-+add stats (health, armor, mana, etc.)
+(B) +add ui
+(B) +add placeholder content (@block, @entity, @player)
+(B) +add stats (health, armor, mana, etc.)
 +add file saving
